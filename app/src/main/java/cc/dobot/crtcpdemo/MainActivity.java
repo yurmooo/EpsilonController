@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     Handler handler=new Handler();
 
     EditText ipEdit, dashPortEdit, movePortEdit, feedBackPortEdit;
-    String currentIP = "192.168.1.6";
+    String currentIP = "192.168.0.21";
     int dashPort = 29999;
     int movePort = 30003;
     int feedBackPort = 30004;

@@ -27,12 +27,20 @@
             </intent-filter>
         </activity>
 
-        <!-- Add this activity declaration -->
+        <!-- MainActivityEpsilon -->
         <activity
             android:name=".MainActivityEpsilon"
             android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize|locale|layoutDirection"
             android:launchMode="singleTask"
             android:exported="true" />
+
+        <!-- ErrorActivity -->
+        <activity
+            android:name=".ErrorActivity"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|locale|layoutDirection"
+            android:launchMode="singleTask"
+            android:exported="true"/>
     </application>
 </manifest>

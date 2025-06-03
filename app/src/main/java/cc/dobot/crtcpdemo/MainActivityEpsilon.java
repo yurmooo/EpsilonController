@@ -2,31 +2,43 @@ package cc.dobot.crtcpdemo;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
+import android.animation.ObjectAnimator;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 
 import com.google.android.material.tabs.TabLayout;
 
@@ -40,7 +52,8 @@ import cc.dobot.crtcpdemo.adapter.TextItemAdapter;
 import cc.dobot.crtcpdemo.data.AlarmData;
 import cc.dobot.crtcpdemo.message.constant.Robot;
 
-public class MainActivityEpsilon extends AppCompatActivity implements MainContract.View, View.OnTouchListener {
+public class MainActivityEpsilon extends AppCompatActivity implements MainContract.View {
+// TODO() Если будут ошибки, вернуть , View.OnTouchListener
     MainActivity.PermissionListener mListener;
     public static final String[] permissionArrays = new String[]{
             Manifest.permission.INTERNET,
@@ -48,22 +61,40 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
             Manifest.permission.READ_EXTERNAL_STORAGE
     };
     Handler handler=new Handler();
-
-    String currentIP = "192.168.0.20";
-    int dashPort = 29999;
-    int movePort = 30003;
-    int feedBackPort = 30004;
-    ImageButton enableRobot, powerBTN, resetRobot, emergencyStop, error_btn;
+    Button[] userButtons = new Button[6];
+    TextView[] userTexts = new TextView[6];
+    Button[] toolButtons = new Button[6];
+    EditText ipAddressEdit, dashPortEdit, movePortEdit, feedBackPortEdit;
+    Button saveSettingsBtn;
+    ImageButton enableRobot, powerBTN, resetRobot, emergencyStop, error_btn, moreBTN;
+    ImageButton settings, script, block_script, log_act, drag_mode, closeButton;
     Button connectRobot, clearAlarm, speedRatioBTN;
     EditText speedRatioEdit;
     Button getPosBTN;
     TextView DIText, DOText;
     TabLayout jogMoveTab;
-    Button jogPlusBtn[];
-    Button jogMinusBtn[];
+    Button j1_btn, j2_btn, j3_btn, j4_btn, j5_btn, j6_btn;
+//    Button jogPlusBtn[];
+//    Button jogMinusBtn[];
     TextView jogText[];
+    RelativeLayout leftPanel;
+    LinearLayout centerPanel, rightPanel, scriptPanel, dropdownPanel;
+    ImageButton collapseButton, expandButton;
+    ImageView connection_icon;
+    TextView[] toolTexts;
+    private int selectedToolAxis = -1;
     MainContract.Present present;
-
+    private List<String> errorList = new ArrayList<>();
+//    private TextItemAdapter errorListAdapter;
+    private int selectedAxis = -1;
+    private boolean isPanelVisible = true;
+    private boolean isSettingsPanelVisible = false;
+    private int leftPanelWidth;
+    private String currentIP;
+    private int dashPort;
+    private int movePort;
+    private int feedBackPort;
+    private Button[] optionButtons = new Button[16];
     private void changeViewStats(boolean b) {
         enableRobot.setEnabled(b);
         resetRobot.setEnabled(b);
@@ -71,17 +102,14 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         speedRatioBTN.setEnabled(b);
         speedRatioEdit.setEnabled(b);
         getPosBTN.setEnabled(b);
-//        error_btn.setEnabled(b);
-
-
+        error_btn.setEnabled(b);
         // TabLayout jogMoveTab;
-        for (Button btn:jogMinusBtn)
-            btn.setEnabled(b);
-        for (Button btn:jogPlusBtn)
-            btn.setEnabled(b);
+//        for (Button btn:jogMinusBtn)
+//            btn.setEnabled(b);
+//        for (Button btn:jogPlusBtn)
+//            btn.setEnabled(b);
 
 //        findViewById(R.id.button_clear_error_info_list).setEnabled(b);
-//TODO() Вернуться когда у меня будут куда-то выводиться ошибки робота
     }
 
     @Override
@@ -107,9 +135,34 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                         }).show();
             }
         });
+
+        scriptPanel = findViewById(R.id.script_panel);
+        closeButton = findViewById(R.id.close_script_panel);
+
+        closeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hideScriptPanel();
+            }
+        });
+
+        View rootView = findViewById(android.R.id.content);
+        rootView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (scriptPanel.getVisibility() == View.VISIBLE) {
+                    hideScriptPanel();
+                }
+            }
+        });
+
         present = new MainPresent(this);
         initView();
         changeViewStats(false);
+
+        if (present.isConnected()) {
+            refreshEnableState(present.isEnable());
+        }
     }
 
     private void initView() {
@@ -117,12 +170,45 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         connectRobot.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                String ip = ipAddressEdit.getText().toString();
+                if (!isValidIpAddress(ip)) {
+                    Toast.makeText(MainActivityEpsilon.this,
+                            "Неверный формат IP-адреса", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                currentIP = ip;
+
+                try {
+                    dashPort = Integer.parseInt(dashPortEdit.getText().toString());
+                    movePort = Integer.parseInt(movePortEdit.getText().toString());
+                    feedBackPort = Integer.parseInt(feedBackPortEdit.getText().toString());
+                } catch (NumberFormatException e) {
+                    Toast.makeText(MainActivityEpsilon.this,
+                            "Неверный формат порта", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Log.d("ConnectionParams", "IP: " + currentIP +
+                        ", dashPort: " + dashPort +
+                        ", movePort: " + movePort +
+                        ", feedBackPort: " + feedBackPort);
+
                 if (present.isConnected()) {
                     present.disconnectRobot();
                     changeViewStats(false);
+                    refreshEnableState(false);
                 } else {
                     present.connectRobot(currentIP, dashPort, movePort, feedBackPort);
                     changeViewStats(true);
+
+                    handler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (present.isConnected()) {
+                                refreshEnableState(present.isEnable());
+                            }
+                        }
+                    }, 1000);
                 }
             }
         });
@@ -131,8 +217,8 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         enableRobot.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                present.setRobotPower(true);
                 present.setRobotEnable(!present.isEnable());
-
             }
         });
 
@@ -144,13 +230,28 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
             }
         });
 
-        powerBTN = findViewById(R.id.button_change_power);
-        powerBTN.setOnClickListener(new View.OnClickListener() {
+        connection_icon = findViewById(R.id.connection_icon);
+        dropdownPanel = findViewById(R.id.dropdown_panel);
+
+        moreBTN = findViewById(R.id.more_button);
+        moreBTN.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
-                present.setRobotPower(true);
+            public void onClick(View view) {
+                if (dropdownPanel.getVisibility() == View.VISIBLE) {
+                    dropdownPanel.setVisibility(View.GONE);
+                } else {
+                    dropdownPanel.setVisibility(View.VISIBLE);
+                }
             }
         });
+
+//        powerBTN = findViewById(R.id.button_change_power);
+//        powerBTN.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                present.setRobotPower(true);
+//            }
+//        });
 
         speedRatioEdit = findViewById(R.id.edit_speed_ratio);
         speedRatioBTN = findViewById(R.id.button_speed_ratio);
@@ -163,6 +264,16 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                     present.setSpeedRatio(1);
                 }
 
+            }
+        });
+
+        error_btn = findViewById(R.id.error_btn);
+        error_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MainActivityEpsilon.this, ErrorActivity.class);
+                intent.putStringArrayListExtra("Ошибки:", new ArrayList<>(errorList));
+                startActivity(intent);
             }
         });
 
@@ -179,6 +290,124 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
             @Override
             public void onClick(View v) {
                 present.emergencyStop();
+            }
+        });
+
+        scriptPanel = findViewById(R.id.script_panel);
+
+        settings = findViewById(R.id.settings);
+        settings.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toggleSettingsPanel();
+            }
+        });
+
+        ipAddressEdit = findViewById(R.id.ip_address_edit);
+        ipAddressEdit.setText("192.168.0.21");
+        ipAddressEdit.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void afterTextChanged(Editable s) {
+                String ip = s.toString();
+                if (!isValidIpAddress(ip)) {
+                    ipAddressEdit.setError("Неверный формат IP-адреса");
+                }
+            }
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) { }
+
+            private boolean isValidIpAddress(String ip) {
+                String[] parts = ip.split("\\.");
+                if (parts.length != 4) return false;
+
+                try {
+                    for (String part : parts) {
+                        int num = Integer.parseInt(part);
+                        if (num < 0 || num > 255) return false;
+                    }
+                    return true;
+                } catch (NumberFormatException e) {
+                    return false;
+                }
+            }
+        });
+
+        dashPortEdit = findViewById(R.id.dash_port_edit);
+        dashPortEdit.setText("29999");
+        movePortEdit = findViewById(R.id.move_port_edit);
+        movePortEdit.setText("30003");
+        feedBackPortEdit = findViewById(R.id.feedback_port_edit);
+        feedBackPortEdit.setText("30004");
+
+        currentIP = "192.168.0.21";
+        dashPort = 29999;
+        movePort = 30003;
+        feedBackPort = 30004;
+
+        saveSettingsBtn = findViewById(R.id.save_settings_btn);
+        saveSettingsBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String newIp = ipAddressEdit.getText().toString();
+                if (isValidIpAddress(newIp)) {
+                    currentIP = newIp;
+                } else {
+                    Toast.makeText(MainActivityEpsilon.this,
+                            "Неверный формат IP-адреса", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                try {
+                    dashPort = Integer.parseInt(dashPortEdit.getText().toString());
+                    movePort = Integer.parseInt(movePortEdit.getText().toString());
+                    feedBackPort = Integer.parseInt(feedBackPortEdit.getText().toString());
+
+                    Toast.makeText(MainActivityEpsilon.this,
+                            "Настройки сохранены", Toast.LENGTH_SHORT).show();
+                } catch (NumberFormatException e) {
+                    Toast.makeText(MainActivityEpsilon.this,
+                            "Неверный формат порта", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        script = findViewById(R.id.script);
+        script.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Toast.makeText(MainActivityEpsilon.this,
+                        "Функция в разработке", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        block_script = findViewById(R.id.block_script);
+        block_script.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Toast.makeText(MainActivityEpsilon.this,
+                        "Функция в разработке", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        log_act = findViewById(R.id.log_act);
+        log_act.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Toast.makeText(MainActivityEpsilon.this,
+                        "Функция в разработке", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        drag_mode = findViewById(R.id.drag_mode);
+        drag_mode.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Toast.makeText(MainActivityEpsilon.this,
+                        "Функция в разработке", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -202,6 +431,157 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         DIText = findViewById(R.id.digital_input_text);
         DOText = findViewById(R.id.digital_output_text);
 
+        findViewById(R.id.j1_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                selectedAxis = 0;
+            }
+        });
+        findViewById(R.id.j2_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                selectedAxis = 1;
+            }
+        });
+        findViewById(R.id.j3_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                selectedAxis = 2;
+            }
+        });
+        findViewById(R.id.j4_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                selectedAxis = 3;
+            }
+        });
+        findViewById(R.id.j5_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                selectedAxis = 4;
+            }
+        });
+        findViewById(R.id.j6_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                selectedAxis = 5;
+            }
+        });
+
+        findViewById(R.id.plus_btn).setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                int tabIndex = jogMoveTab.getSelectedTabPosition();
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        if (tabIndex == 0) { // Общие
+                            if (selectedAxis >= 0) {
+                                present.setJogMove(false, selectedAxis);
+                            } else {
+                                Toast.makeText(MainActivityEpsilon.this,
+                                        "Сначала выберите ось", Toast.LENGTH_SHORT).show();
+                            }
+                        } else if (tabIndex == 1) { // Пользователь
+                            if (selectedToolAxis >= 0) {
+                                present.setJogMove(true, selectedToolAxis);
+                            } else {
+                                Toast.makeText(MainActivityEpsilon.this,
+                                        "Сначала выберите ось пользователя", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                        return true;
+
+                    case MotionEvent.ACTION_UP:
+                        present.stopMove();
+                        return true;
+                }
+                return false;
+            }
+        });
+
+        findViewById(R.id.minus_btn).setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                int tabIndex = jogMoveTab.getSelectedTabPosition();
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        if (tabIndex == 0) { // Общие
+                            if (selectedAxis >= 0) {
+                                present.setJogMove(false, selectedAxis + 6);
+                            } else {
+                                Toast.makeText(MainActivityEpsilon.this,
+                                        "Сначала выберите ось", Toast.LENGTH_SHORT).show();
+                            }
+                        } else if (tabIndex == 1) { // Пользователь
+                            if (selectedToolAxis >= 0) {
+                                present.setJogMove(true, selectedToolAxis + 6);
+                            } else {
+                                Toast.makeText(MainActivityEpsilon.this,
+                                        "Сначала выберите ось пользователя", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                        return true;
+
+                    case MotionEvent.ACTION_UP:
+                        present.stopMove();
+                        return true;
+                }
+                return false;
+            }
+        });
+
+        View.OnTouchListener axisTouchListener = new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    if (v.isSelected()) {
+                        v.setSelected(false);
+                        selectedAxis = -1;
+                        return true;
+                    }
+
+                    for (int i = 1; i <= 6; i++) {
+                        int resId = getResources().getIdentifier("j" + i + "_btn", "id", getPackageName());
+                        findViewById(resId).setSelected(false);
+                    }
+
+                    v.setSelected(true);
+
+                    switch (v.getId()) {
+                        case R.id.j1_btn:
+                            selectedAxis = 0;
+                            break;
+                        case R.id.j2_btn:
+                            selectedAxis = 1;
+                            break;
+                        case R.id.j3_btn:
+                            selectedAxis = 2;
+                            break;
+                        case R.id.j4_btn:
+                            selectedAxis = 3;
+                            break;
+                        case R.id.j5_btn:
+                            selectedAxis = 4;
+                            break;
+                        case R.id.j6_btn:
+                            selectedAxis = 5;
+                            break;
+                        default:
+                            return false;
+                    }
+                    return true;
+                }
+                return false;
+            }
+        };
+
+        findViewById(R.id.j1_btn).setOnTouchListener(axisTouchListener);
+        findViewById(R.id.j2_btn).setOnTouchListener(axisTouchListener);
+        findViewById(R.id.j3_btn).setOnTouchListener(axisTouchListener);
+        findViewById(R.id.j4_btn).setOnTouchListener(axisTouchListener);
+        findViewById(R.id.j5_btn).setOnTouchListener(axisTouchListener);
+        findViewById(R.id.j6_btn).setOnTouchListener(axisTouchListener);
+
         jogText = new TextView[6];
         jogText[0] = findViewById(R.id.jog_j1_text);
         jogText[1] = findViewById(R.id.jog_j2_text);
@@ -210,132 +590,203 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         jogText[4] = findViewById(R.id.jog_j5_text);
         jogText[5] = findViewById(R.id.jog_j6_text);
 
-        jogPlusBtn = new Button[6];
-        jogPlusBtn[0] = findViewById(R.id.jog_j1_plus_button);
-        jogPlusBtn[1] = findViewById(R.id.jog_j2_plus_button);
-        jogPlusBtn[2] = findViewById(R.id.jog_j3_plus_button);
-        jogPlusBtn[3] = findViewById(R.id.jog_j4_plus_button);
-        jogPlusBtn[4] = findViewById(R.id.jog_j5_plus_button);
-        jogPlusBtn[5] = findViewById(R.id.jog_j6_plus_button);
+        j1_btn = findViewById(R.id.j1_btn);
+        j2_btn = findViewById(R.id.j2_btn);
+        j3_btn = findViewById(R.id.j3_btn);
+        j4_btn = findViewById(R.id.j4_btn);
+        j5_btn = findViewById(R.id.j5_btn);
+        j6_btn = findViewById(R.id.j6_btn);
 
-        jogMinusBtn = new Button[6];
-        jogMinusBtn[0] = findViewById(R.id.jog_j1_minus_button);
-        jogMinusBtn[1] = findViewById(R.id.jog_j2_minus_button);
-        jogMinusBtn[2] = findViewById(R.id.jog_j3_minus_button);
-        jogMinusBtn[3] = findViewById(R.id.jog_j4_minus_button);
-        jogMinusBtn[4] = findViewById(R.id.jog_j5_minus_button);
-        jogMinusBtn[5] = findViewById(R.id.jog_j6_minus_button);
+        toolTexts = new TextView[6];
+        toolTexts[0] = findViewById(R.id.tool_x_text);
+        toolTexts[1] = findViewById(R.id.tool_y_text);
+        toolTexts[2] = findViewById(R.id.tool_z_text);
+        toolTexts[3] = findViewById(R.id.tool_rx_text);
+        toolTexts[4] = findViewById(R.id.tool_ry_text);
+        toolTexts[5] = findViewById(R.id.tool_rz_text);
 
-        jogPlusBtn[0].setOnTouchListener(this);
-        jogPlusBtn[1].setOnTouchListener(this);
-        jogPlusBtn[2].setOnTouchListener(this);
-        jogPlusBtn[3].setOnTouchListener(this);
-        jogPlusBtn[4].setOnTouchListener(this);
-        jogPlusBtn[5].setOnTouchListener(this);
+        // Инициализация элементов пользовательских координат
+        userButtons[0] = findViewById(R.id.x_user_btn);
+        userButtons[1] = findViewById(R.id.y_user_btn);
+        userButtons[2] = findViewById(R.id.z_user_btn);
+        userButtons[3] = findViewById(R.id.rx_user_btn);
+        userButtons[4] = findViewById(R.id.ry_user_btn);
+        userButtons[5] = findViewById(R.id.rz_user_btn);
 
-        jogMinusBtn[0].setOnTouchListener(this);
-        jogMinusBtn[1].setOnTouchListener(this);
-        jogMinusBtn[2].setOnTouchListener(this);
-        jogMinusBtn[3].setOnTouchListener(this);
-        jogMinusBtn[4].setOnTouchListener(this);
-        jogMinusBtn[5].setOnTouchListener(this);
+        userTexts[0] = findViewById(R.id.user_x_text);
+        userTexts[1] = findViewById(R.id.user_y_text);
+        userTexts[2] = findViewById(R.id.user_z_text);
+        userTexts[3] = findViewById(R.id.user_rx_text);
+        userTexts[4] = findViewById(R.id.user_ry_text);
+        userTexts[5] = findViewById(R.id.user_rz_text);
+
+        // Инициализация кнопок инструмента (они уже есть как toolTexts)
+        toolButtons[0] = findViewById(R.id.x_btn);
+        toolButtons[1] = findViewById(R.id.y_btn);
+        toolButtons[2] = findViewById(R.id.z_btn);
+        toolButtons[3] = findViewById(R.id.rx_btn);
+        toolButtons[4] = findViewById(R.id.ry_btn);
+        toolButtons[5] = findViewById(R.id.rz_btn);
+
+        setupToolAxisListeners();
+
+        for (int i = 0; i < toolTexts.length; i++) {
+            final int axisIndex = i;
+            toolTexts[i].setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Сброс выделения всех осей
+                    for (int j = 0; j < toolTexts.length; j++) {
+                        toolTexts[j].setBackgroundColor(Color.TRANSPARENT);
+                    }
+                    // Выделение выбранной оси
+                    v.setBackgroundColor(Color.parseColor("#E0E0E0"));
+                    selectedToolAxis = axisIndex;
+
+                    Log.d("TOOL_AXIS", "Selected tool axis: " + axisIndex);
+                    Toast.makeText(MainActivityEpsilon.this, "Вы выбрали ось " + getAxisName(axisIndex), Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
 
         jogMoveTab=findViewById(R.id.jog_move_tab);
         jogMoveTab.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
-                if (tab.getPosition()==0)
-                {
-                    jogText[0].setText("J1");
-                    jogText[1].setText("J2");
-                    jogText[2].setText("J3");
-                    jogText[3].setText("J4");
-                    jogText[4].setText("J5");
-                    jogText[5].setText("J6");
-                }else   {
-                    jogText[0].setText("x");
-                    jogText[1].setText("y");
-                    jogText[2].setText("z");
-                    jogText[3].setText("rx");
-                    jogText[4].setText("ry");
-                    jogText[5].setText("rz");
+                int position = tab.getPosition();
+                switch (position) {
+                    case 0: // Общие координаты
+                        findViewById(R.id.axes_joints_group).setVisibility(View.VISIBLE);
+                        findViewById(R.id.axes_user_group).setVisibility(View.GONE);
+                        findViewById(R.id.axes_tool_group).setVisibility(View.GONE);
+                        selectedAxis = -1;
+                        selectedToolAxis = -1;
+                        break;
+
+                    case 1: // Пользовательские координаты
+                        findViewById(R.id.axes_joints_group).setVisibility(View.GONE);
+                        findViewById(R.id.axes_user_group).setVisibility(View.VISIBLE);
+                        findViewById(R.id.axes_tool_group).setVisibility(View.GONE);
+                        selectedAxis = -1;
+                        selectedToolAxis = -1;
+                        break;
+
+                    case 2: // Координаты инструмента
+                        findViewById(R.id.axes_joints_group).setVisibility(View.GONE);
+                        findViewById(R.id.axes_user_group).setVisibility(View.GONE);
+                        findViewById(R.id.axes_tool_group).setVisibility(View.VISIBLE);
+                        selectedAxis = -1;
+                        selectedToolAxis = -1;
+                        break;
                 }
             }
 
             @Override
             public void onTabUnselected(TabLayout.Tab tab) {
-
+                // Можно добавить дополнительную логику при уходе с вкладки
             }
 
             @Override
             public void onTabReselected(TabLayout.Tab tab) {
-
+                // Можно добавить логику при повторном выборе той же вкладки
             }
         });
-    }
 
-    int pos = -1;
+        leftPanel = findViewById(R.id.left_panel_wrapper);
+        leftPanel.post(new Runnable() {
+            @Override
+            public void run() {
+                leftPanelWidth = leftPanel.getWidth();
+            }
+        });
+        centerPanel = findViewById(R.id.center_panel);
+        rightPanel = findViewById(R.id.right_panel);
 
-    @Override
-    public boolean onTouch(View v, MotionEvent event) {
-        boolean isPosTouch = true;
+        collapseButton = findViewById(R.id.btn_collapse_left);
+        collapseButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                hideLeftPanel();
+            }
+        });
 
-        switch (v.getId()) {
-            case R.id.jog_j1_plus_button:
-                pos = 0;
-                break;
-            case R.id.jog_j2_plus_button:
-                pos = 1;
-                break;
-            case R.id.jog_j3_plus_button:
-                pos = 2;
-                break;
-            case R.id.jog_j4_plus_button:
-                pos = 3;
-                break;
-            case R.id.jog_j5_plus_button:
-                pos = 4;
-                break;
-            case R.id.jog_j6_plus_button:
-                pos = 5;
-                break;
-            case R.id.jog_j1_minus_button:
-                pos = 6;
-                break;
-            case R.id.jog_j2_minus_button:
-                pos = 7;
-                break;
-            case R.id.jog_j3_minus_button:
-                pos = 8;
-                break;
-            case R.id.jog_j4_minus_button:
-                pos = 9;
-                break;
-            case R.id.jog_j5_minus_button:
-                pos = 10;
-                break;
-            case R.id.jog_j6_minus_button:
-                pos = 11;
-                break;
-            default:
-                isPosTouch = false;
+        expandButton = findViewById(R.id.btn_expand_left);
+        expandButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showLeftPanel();}
+        });
+
+        for (int i = 1; i <= 16; i++) {
+            int resId = getResources().getIdentifier("btn_option" + i, "id", getPackageName());
+            optionButtons[i-1] = findViewById(resId);
+            optionButtons[i-1].setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Сбрасываем цвет всех кнопок
+                    resetOptionButtonsColor();
+                    // Устанавливаем цвет для нажатой кнопки
+                    v.setBackgroundResource(R.drawable.button_option_selected);
+                    ((Button)v).setTextColor(getResources().getColor(android.R.color.white));
+
+                    // Здесь добавьте логику обработки нажатия
+                    int buttonId = Integer.parseInt(v.getTag().toString());
+                    handleOptionButtonClick(buttonId);
+                }
+            });
+            optionButtons[i-1].setTag(i); // Сохраняем номер кнопки в теге
         }
-        if (event.getAction() == MotionEvent.ACTION_DOWN && isPosTouch) {
-            if (pos<12)
-                present.setJogMove(false, pos);
-            else
-                present.setJogMove(true, pos-12);
-        } else if (event.getAction() == MotionEvent.ACTION_POINTER_2_DOWN && pos != -1 && !isPosTouch) {
-            pos = -1;
-            present.stopMove();
-        } else if (event.getAction() == MotionEvent.ACTION_UP && pos != -1) {
-            pos = -1;
-            present.stopMove();
-        } else if (event.getAction() == MotionEvent.ACTION_POINTER_UP && pos != -1) {
-            pos = -1;
-            present.stopMove();
+
+        // В методе initView() добавьте:
+        for (int i = 0; i < userButtons.length; i++) {
+            final int axisIndex = i;
+            userButtons[i].setOnTouchListener(new View.OnTouchListener() {
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                        if (v.isSelected()) {
+                            v.setSelected(false);
+                            selectedToolAxis = -1;
+                            return true;
+                        }
+
+                        for (Button btn : userButtons) {
+                            btn.setSelected(false);
+                        }
+
+                        v.setSelected(true);
+                        selectedToolAxis = axisIndex;
+                        return true;
+                    }
+                    return false;
+                }
+            });
         }
-        return false;
+
+        for (int i = 0; i < toolButtons.length; i++) {
+            final int axisIndex = i;
+            toolButtons[i].setOnTouchListener(new View.OnTouchListener() {
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                        if (v.isSelected()) {
+                            v.setSelected(false);
+                            selectedToolAxis = -1;
+                            return true;
+                        }
+
+                        for (Button btn : toolButtons) {
+                            btn.setSelected(false);
+                        }
+
+                        v.setSelected(true);
+                        selectedToolAxis = axisIndex;
+                        return true;
+                    }
+                    return false;
+                }
+            });
+        }
     }
 
 //    public interface PermissionListener {
@@ -347,7 +798,6 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
 //    }
 
     public void requestRuntimePermission(String[] permissions, MainActivity.PermissionListener listener) {
-
         mListener = listener;
         List<String> permissionList = new ArrayList<>();
         for (String permission : permissions) {
@@ -399,15 +849,20 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
     @Override
     public void refreshConnectionState(boolean isConnected) {
         connectRobot.setText(isConnected ? R.string.disconnect_robot : R.string.connect_robot);
+        if (isConnected) {
+            connection_icon.setImageResource(R.drawable.ic_wifi_green);
+        } else {
+            connection_icon.setImageResource(R.drawable.ic_wifi);
+        }
     }
 
     @Override
     public void refreshPowerState(boolean isPowerOn) {
-        if (isPowerOn) {
-            powerBTN.setImageResource(R.drawable.ic_power_button_red);
-        } else {
-            powerBTN.setImageResource(R.drawable.ic_power);
-        }
+//        if (isPowerOn) {
+//            powerBTN.setImageResource(R.drawable.ic_power_button_red);
+//        } else {
+//            powerBTN.setImageResource(R.drawable.ic_power);
+//        }
     }
 
     @Override
@@ -426,7 +881,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
 
     @Override
     public void refreshRobotMode(Robot.Mode mode) {
-//        robotModeText.setText(getString(R.string.robot_mode_text) + mode);
+//        robotModeText.setText(getString(R.string.robot_mode_text) + mode); TODO(Вывод состояния робота)
     }
 
     @Override
@@ -456,46 +911,44 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
     }
 
     @Override
-    public void refreshQActual(double[] getqActual) {
+    public void refreshQActual(final double[] getqActual) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                NumberFormat nf = NumberFormat.getInstance();
+                nf.setGroupingUsed(false);
+                nf.setMaximumFractionDigits(4);
 
-        int i = 0;
-        NumberFormat nf = NumberFormat.getInstance();
-        nf.setGroupingUsed(false);
-        for (double data : getqActual) {
-            i++;
-            data = (double) (Math.round(data * 10000)) / 10000;
-            getqActual[i - 1] = data;
-            jogText[i-1].setText("J"+i+":"+nf.format(getqActual[i-1]));
-        }
-        //System.out.println("j data "+i+" 1:"+data);
-
-
-        /*qActualText.setText(
-                "j1:" + nf.format(getqActual[0]) +
-                        " j2:" + nf.format(getqActual[1]) +
-                        " j3:" + nf.format(getqActual[2]) +
-                        "\nj4:" + nf.format(getqActual[3]) +
-                        " j5:" + nf.format(getqActual[4]) +
-                        " j6:" + nf.format(getqActual[5]));*/
+                for (int i = 0; i < getqActual.length; i++) {
+                    getqActual[i] = (double) (Math.round(getqActual[i] * 10000)) / 10000;
+                    jogText[i].setText("J" + (i+1) + ": " + nf.format(getqActual[i]));
+                }
+            }
+        });
     }
 
     @Override
-    public void refreshToolVectorActual(double[] toolVectorActual) {
-//        int i = 0;
-//        for (double data : toolVectorActual) {
-//            i++;
-//            data = (double) (Math.round(data * 10000)) / 10000;
-//            toolVectorActual[i - 1] = data;
-//        }
-//        NumberFormat nf = NumberFormat.getInstance();
-//        nf.setGroupingUsed(false);
-//        coordText[0].setText(  "X:" + toolVectorActual[0]);
-//        coordText[1].setText(  "Y:" + toolVectorActual[1]);
-//        coordText[2].setText(  "Z:" + toolVectorActual[2]);
-//        coordText[3].setText(  "RX:" + toolVectorActual[3]);
-//        coordText[4].setText(  "RY:" + toolVectorActual[4]);
-//        coordText[5].setText(  "RZ:" + toolVectorActual[5]);
-//TODO() Нужно сделать переменную, когда будешь переключаться с пользователя на инструмент
+    public void refreshToolVectorActual(final double[] toolVectorActual) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                NumberFormat nf = NumberFormat.getInstance();
+                nf.setGroupingUsed(false);
+                nf.setMaximumFractionDigits(4);
+
+                for (int i = 0; i < toolVectorActual.length; i++) {
+                    toolVectorActual[i] = (double) (Math.round(toolVectorActual[i] * 10000)) / 10000;
+
+                    // Обновляем текст для всех типов координат
+                    if (toolTexts[i] != null) {
+                        toolTexts[i].setText(getAxisName(i) + ": " + nf.format(toolVectorActual[i]));
+                    }
+                    if (userTexts[i] != null) {
+                        userTexts[i].setText(getAxisName(i) + ": " + nf.format(toolVectorActual[i]));
+                    }
+                }
+            }
+        });
     }
 
     @Override
@@ -505,9 +958,8 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
 
     @Override
     public void refreshErrorList(String errorInfo) {
-//        errorList.add(errorInfo);
+        errorList.add(errorInfo);
 //        errorListAdapter.notifyDataSetChanged();
-//TODO() Добавить вывод ошибок
     }
 
     @Override
@@ -524,11 +976,184 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
     };
 
     @Override
-    public void refreshAlarmList(List<AlarmData> dataList) {
-//        errorList.clear();
-//        for (AlarmData data:dataList)
-//            errorList.add(data.toString());
-//        errorListAdapter.notifyDataSetChanged();
-//TODO() Перезапуск ошибок
+    public void refreshAlarmList(final List<AlarmData> dataList) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                errorList.clear();
+                for (AlarmData data : dataList) {
+                    errorList.add(data.toString());
+                }
+//                errorListAdapter.notifyDataSetChanged();
+            }
+        });
+    }
+
+    private String getAxisName(int index) {
+        switch (index) {
+            case 0: return "X";
+            case 1: return "Y";
+            case 2: return "Z";
+            case 3: return "RX";
+            case 4: return "RY";
+            case 5: return "RZ";
+            default: return "";
+        }
+    }
+
+    // АНИМАЦИИ
+    private void hideLeftPanel() {
+        leftPanel.animate()
+                .translationX(-leftPanelWidth)
+                .setDuration(300)
+                .setListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        updateWeights(0f, 2.7f, 0.25f);
+                        leftPanel.setVisibility(View.GONE);
+                        collapseButton.setVisibility(View.GONE);
+                        expandButton.setVisibility(View.VISIBLE);
+                        isPanelVisible = false;
+                    }
+                });
+    }
+
+    private void showLeftPanel() {
+        updateWeights(0.3f, 2.7f, 0.25f);
+        leftPanel.setVisibility(View.VISIBLE);
+        collapseButton.setVisibility(View.VISIBLE);
+        leftPanel.setTranslationX(-leftPanelWidth);
+
+        leftPanel.animate()
+                .translationX(0)
+                .setDuration(300)
+                .setListener(null);
+
+        expandButton.setVisibility(View.GONE);
+        isPanelVisible = true;
+    }
+
+    private void updateWeights(float leftWeight, float centerWeight, float rightWeight) {
+        LinearLayout.LayoutParams leftParams = (LinearLayout.LayoutParams) leftPanel.getLayoutParams();
+        LinearLayout.LayoutParams centerParams = (LinearLayout.LayoutParams) centerPanel.getLayoutParams();
+        LinearLayout.LayoutParams rightParams = (LinearLayout.LayoutParams) rightPanel.getLayoutParams();
+
+        leftParams.weight = leftWeight;
+        centerParams.weight = centerWeight;
+        rightParams.weight = rightWeight;
+
+        leftPanel.setLayoutParams(leftParams);
+        centerPanel.setLayoutParams(centerParams);
+        rightPanel.setLayoutParams(rightParams);
+
+        leftPanel.requestLayout();
+        centerPanel.requestLayout();
+        rightPanel.requestLayout();
+    }
+
+    private void toggleSettingsPanel() {
+        final LinearLayout settingsPanel = findViewById(R.id.script_panel);
+        final RelativeLayout leftPanel = findViewById(R.id.left_panel_wrapper);
+
+        if (isSettingsPanelVisible) {
+            // Анимация закрытия
+            settingsPanel.animate()
+                    .translationX(-settingsPanel.getWidth())
+                    .setDuration(300)
+                    .withEndAction(new Runnable() {
+                        @Override
+                        public void run() {
+                            settingsPanel.setVisibility(View.GONE);
+                            showLeftPanel(); // Показываем left_panel после закрытия
+                        }
+                    });
+        } else {
+            hideLeftPanel(); // Скрываем left_panel перед открытием
+            settingsPanel.setVisibility(View.VISIBLE);
+            settingsPanel.bringToFront();
+
+            // Анимация открытия
+            settingsPanel.animate()
+                    .translationX(0)
+                    .setDuration(300);
+        }
+
+        isSettingsPanelVisible = !isSettingsPanelVisible;
+    }
+
+    private void hideScriptPanel() {
+        final LinearLayout settingsPanel = findViewById(R.id.script_panel);
+        final RelativeLayout leftPanel = findViewById(R.id.left_panel_wrapper);
+
+        if (isSettingsPanelVisible) {
+            // Анимация закрытия
+            settingsPanel.animate()
+                    .translationX(-settingsPanel.getWidth())
+                    .setDuration(300)
+                    .withEndAction(new Runnable() {
+                        @Override
+                        public void run() {
+                            settingsPanel.setVisibility(View.GONE);
+                            showLeftPanel(); // Показываем left_panel после закрытия
+                        }
+                    });
+
+            isSettingsPanelVisible = false;
+        }
+    }
+
+    private boolean isValidIpAddress(String ip) {
+        String[] parts = ip.split("\\.");
+        if (parts.length != 4) return false;
+
+        try {
+            for (String part : parts) {
+                int num = Integer.parseInt(part);
+                if (num < 0 || num > 255) return false;
+            }
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    private void resetDragModeIcon(boolean isDrag) {
+        if (isDrag) {
+            drag_mode.setImageResource(R.drawable.ic_dragred);
+        } else {
+            drag_mode.setImageResource(R.drawable.ic_drag);
+        }
+    }
+
+    private void resetOptionButtonsColor() {
+        for (Button btn : optionButtons) {
+            if (btn != null) {
+                btn.setBackgroundResource(R.drawable.button_option_selector);
+                btn.setTextColor(getResources().getColor(android.R.color.black));
+            }
+        }
+    }
+
+    private void handleOptionButtonClick(int buttonId) {
+        // Ваша логика обработки нажатия кнопки TODO() ВЫХОДЫ
+        Toast.makeText(this, "Нажата кнопка " + buttonId, Toast.LENGTH_SHORT).show();
+    }
+
+    private void setupToolAxisListeners() {
+        for (int i = 0; i < toolTexts.length; i++) {
+            final int axisIndex = i;
+            toolTexts[i].setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Сброс выделения всех осей
+                    for (int j = 0; j < toolTexts.length; j++) {
+                        toolTexts[j].setBackgroundColor(Color.TRANSPARENT);
+                    }
+                    // Установка фона и переменной
+                    v.setBackgroundColor(Color.parseColor("#E0E0E0"));
+                    selectedToolAxis = axisIndex;
+                }
+            });
+        }
     }
 }
