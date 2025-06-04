@@ -96,6 +96,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
     private int movePort;
     private int feedBackPort;
     private Button[] optionButtons = new Button[16];
+    private boolean[] digitalOutputStatus = new boolean[16]; // по умолчанию false (выключены)
     private void changeViewStats(boolean b) {
         enableRobot.setEnabled(b);
         resetRobot.setEnabled(b);
@@ -744,24 +745,21 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                 showLeftPanel();}
         });
 
-        for (int i = 1; i <= 16; i++) {
-            int resId = getResources().getIdentifier("btn_option" + i, "id", getPackageName());
-            optionButtons[i-1] = findViewById(resId);
-            optionButtons[i-1].setOnClickListener(new View.OnClickListener() {
+        for (int i = 0; i < 16; i++) {
+            int resId = getResources().getIdentifier("btn_option" + (i + 1), "id", getPackageName());
+            optionButtons[i] = findViewById(resId);
+            final int outputIndex = i; // 0–15
+
+            optionButtons[i].setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    // Сбрасываем цвет всех кнопок
                     resetOptionButtonsColor();
-                    // Устанавливаем цвет для нажатой кнопки
                     v.setBackgroundResource(R.drawable.button_option_selected);
-                    ((Button)v).setTextColor(getResources().getColor(android.R.color.white));
+                    ((Button) v).setTextColor(getResources().getColor(android.R.color.white));
 
-                    // Здесь добавьте логику обработки нажатия
-                    int buttonId = Integer.parseInt(v.getTag().toString());
-                    handleOptionButtonClick(buttonId);
+                    handleOptionButtonClick(outputIndex); // передаём 0–15
                 }
             });
-            optionButtons[i-1].setTag(i); // Сохраняем номер кнопки в теге
         }
 
         for (int i = 0; i < userButtons.length; i++) {
@@ -1160,8 +1158,63 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         }
     }
 
-    private void handleOptionButtonClick(int buttonId) {
-        // Ваша логика обработки нажатия кнопки TODO() ВЫХОДЫ
-        Toast.makeText(this, "Нажата кнопка " + buttonId, Toast.LENGTH_SHORT).show();
+    private void handleOptionButtonClick(int index) {
+        int outputNumber = index + 1;
+
+        if (outputNumber < 1 || outputNumber > 16) {
+            Toast.makeText(this, "Недопустимый номер выхода", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Переключаем состояние
+        digitalOutputStatus[index] = !digitalOutputStatus[index];
+        present.setDigitalOutput(outputNumber, digitalOutputStatus[index]);
+
+        // Обновление цвета кнопки
+        if (digitalOutputStatus[index]) {
+            optionButtons[index].setBackgroundResource(R.drawable.button_option_selected);
+            optionButtons[index].setTextColor(getResources().getColor(android.R.color.white));
+        } else {
+            optionButtons[index].setBackgroundResource(R.drawable.button_option_default);
+            optionButtons[index].setTextColor(getResources().getColor(android.R.color.black));
+        }
     }
+
+//    private void handleOptionButtonClick(int buttonId) {
+//        int outputIndex = buttonId - 1;
+//
+//        // Проверка границ
+//        if (outputIndex < 0 || outputIndex >= digitalOutputStatus.length) {
+//            Toast.makeText(this, "Недопустимый номер выхода", Toast.LENGTH_SHORT).show();
+//            return;
+//        }
+//
+//        boolean currentState = digitalOutputStatus[outputIndex];
+//        boolean newState = !currentState;
+//        digitalOutputStatus[outputIndex] = newState;
+//
+//        // Отправка команды
+//        present.setDigitalOutput(outputIndex, newState);
+//
+//        // Обновление визуального состояния кнопки
+//        Button button = findViewById(getResources().getIdentifier("btn_option" + buttonId, "id", getPackageName()));
+//        if (button != null) {
+//            button.setBackgroundColor(newState ? Color.GREEN : Color.LTGRAY); // Подсветка состояния
+//        }
+//    }
+
+//    private void handleOptionButtonClick(int index) {
+//        // Переключаем состояние выхода
+//        digitalOutputStatus[index] = !digitalOutputStatus[index];
+//
+//        // Отправляем команду через presenter
+//        present.setDigitalOutput(index, digitalOutputStatus[index]);
+//
+//        // Обновим текст на кнопке (необязательно)
+//        int buttonId = getResources().getIdentifier("btn_option" + (index + 1), "id", getPackageName());
+//        Button button = findViewById(buttonId);
+//        button.setText(digitalOutputStatus[index] ? "ON" : "OFF");
+//
+//        Toast.makeText(this, "Выход " + (index + 1) + ": " + (digitalOutputStatus[index] ? "включен" : "выключен"), Toast.LENGTH_SHORT).show();
+//    }
 }

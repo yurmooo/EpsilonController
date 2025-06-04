@@ -36,6 +36,7 @@ import cc.dobot.crtcpdemo.message.constant.CmdSet;
 import cc.dobot.crtcpdemo.message.constant.Robot;
 import cc.dobot.crtcpdemo.message.factory.MessageFactory;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageClearError;
+import cc.dobot.crtcpdemo.message.product.cr.CRMessageDO;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageDOExecute;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageEmergencyStop;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageGetErrorID;
@@ -809,5 +810,18 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
             return null;
         }
         return buffer.toString();
+    }
+
+    @Override
+    public void setDigitalOutput(int index, boolean status) {
+        CRMessageDO msg = (CRMessageDO) MessageFactory.getInstance().createMsg(CmdSet.DO);
+        msg.setIndex(index);
+        msg.setStatus(status ? 1 : 0);
+
+        // Показываем в логе (необязательно)
+        view.refreshLogList(true, msg.getMessageStringContent());
+
+        // Отправляем сообщение
+        MoveMessageClient.getInstance().sendMsg(msg, null);
     }
 }

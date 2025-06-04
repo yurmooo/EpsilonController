@@ -35,6 +35,7 @@ public interface MainContract {
     }
 
     interface Present{
+        void setDigitalOutput(int index, boolean status);
         boolean isConnected();
         void connectRobot(String currentIP, int dashPort, int movePort, int feedBackPort);
         void disconnectRobot();
