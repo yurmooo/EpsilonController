@@ -10,8 +10,10 @@ import com.xuhao.didi.core.pojo.OriginalData;
 
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -20,6 +22,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.net.Socket;
 
 import cc.dobot.crtcpdemo.client.APIMessageClient;
 import cc.dobot.crtcpdemo.client.MessageCallback;
@@ -59,6 +62,7 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
     boolean isPowerOn;
     boolean isEnable;
     boolean isInit = false;
+    Socket socket;
 
     public static final String ALARM_CONTROLLER_PATH ="alarm_controller.json";
     public static final String ALARM_SERVO_PATH = "alarm_servo.json";
@@ -236,20 +240,34 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
         });
     }
 
-    private void setTool(int index) {
+//    private void setTool(int index) {
+//        CRMessageTool crMessageTool = (CRMessageTool) MessageFactory.getInstance().createMsg(CmdSet.TOOL);
+//        crMessageTool.setIndex(index);
+//        view.refreshLogList(true,crMessageTool.getMessageStringContent());
+//        APIMessageClient.getInstance().sendMsg(crMessageTool, new MessageCallback() {
+//            @Override
+//            public void onMsgCallback(MsgState state, OriginalData msg) {
+//                System.out.println("setTool msgState:" + state);
+//                if (msg!=null)
+//                    view.refreshLogList(false,new String(msg.getTotalBytes()));
+//            }
+//        });
+//    }
+
+    @Override
+    public void setTool(int index) {
         CRMessageTool crMessageTool = (CRMessageTool) MessageFactory.getInstance().createMsg(CmdSet.TOOL);
         crMessageTool.setIndex(index);
-        view.refreshLogList(true,crMessageTool.getMessageStringContent());
+        view.refreshLogList(true, crMessageTool.getMessageStringContent());
         APIMessageClient.getInstance().sendMsg(crMessageTool, new MessageCallback() {
             @Override
             public void onMsgCallback(MsgState state, OriginalData msg) {
                 System.out.println("setTool msgState:" + state);
-                if (msg!=null)
-                    view.refreshLogList(false,new String(msg.getTotalBytes()));
+                if (msg != null)
+                    view.refreshLogList(false, new String(msg.getTotalBytes()));
             }
         });
     }
-
 
     private void setArmOrientation(int r, int d, int n, int cfg) {
         CRMessageSetArmOrientation crMessageSetArmOrientation = (CRMessageSetArmOrientation) MessageFactory.getInstance().createMsg(CmdSet.SET_ARM_ORIENTATION);
@@ -465,6 +483,32 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
         byte DOarray = StateMessageClient.getInstance().getState().getDO()[i];
         int mod = index - 1 - i * 8;
         return DOarray >> mod & 0x01;
+    }
+
+    @Override
+    public void setToolJogMove(int axisIndex, boolean isPositive) {
+        String[] axisNames = {"X", "Y", "Z", "Rx", "Ry", "Rz"};
+        if (axisIndex >= 0 && axisIndex < axisNames.length) {
+            String dir = isPositive ? "+" : "-";
+            String command = axisNames[axisIndex] + dir;
+
+            CRMessageMoveJog msg = (CRMessageMoveJog) MessageFactory.getInstance().createMsg(CmdSet.MOVE_JOG);
+            msg.setAxisID(command);
+            String messageContent = "MoveJog(" + command + ",CoordType=2)"; // 1 for tool coordinate system
+            msg.setMessageContent(messageContent.getBytes(Charset.forName("US-ASCII")));
+            view.refreshLogList(true, msg.getMessageStringContent());
+            MoveMessageClient.getInstance().sendMsg(msg, null);
+        }
+    }
+
+    public void sendCommand(String command) {
+        try {
+            OutputStream outputStream = socket.getOutputStream();
+            outputStream.write(command.getBytes());
+            outputStream.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override

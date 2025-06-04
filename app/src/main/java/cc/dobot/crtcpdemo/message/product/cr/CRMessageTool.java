@@ -11,7 +11,7 @@ import cc.dobot.crtcpdemo.message.base.BaseMessage;
 
 public class CRMessageTool extends BaseMessage {
 
-    private int index=1;
+    private int index=0;
     @Override
     public void constructSendData() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {

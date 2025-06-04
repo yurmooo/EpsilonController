@@ -87,6 +87,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
     private List<String> errorList = new ArrayList<>();
 //    private TextItemAdapter errorListAdapter;
     private int selectedAxis = -1;
+    private int selectedToolCoordAxis = -1;
     private boolean isPanelVisible = true;
     private boolean isSettingsPanelVisible = false;
     private int leftPanelWidth;
@@ -488,9 +489,15 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                                 Toast.makeText(MainActivityEpsilon.this,
                                         "Сначала выберите ось пользователя", Toast.LENGTH_SHORT).show();
                             }
+                        } else if (tabIndex == 2) { // Инструмент
+                            if (selectedToolCoordAxis >= 0) {
+                                present.setToolJogMove(selectedToolCoordAxis, true);
+                            } else {
+                                Toast.makeText(MainActivityEpsilon.this,
+                                        "Сначала выберите ось инструмента", Toast.LENGTH_SHORT).show();
+                            }
                         }
                         return true;
-
                     case MotionEvent.ACTION_UP:
                         present.stopMove();
                         return true;
@@ -505,23 +512,29 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                 int tabIndex = jogMoveTab.getSelectedTabPosition();
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
-                        if (tabIndex == 0) { // Общие
+                        if (tabIndex == 0) {
                             if (selectedAxis >= 0) {
                                 present.setJogMove(false, selectedAxis + 6);
                             } else {
                                 Toast.makeText(MainActivityEpsilon.this,
                                         "Сначала выберите ось", Toast.LENGTH_SHORT).show();
                             }
-                        } else if (tabIndex == 1) { // Пользователь
+                        } else if (tabIndex == 1) {
                             if (selectedToolAxis >= 0) {
                                 present.setJogMove(true, selectedToolAxis + 6);
                             } else {
                                 Toast.makeText(MainActivityEpsilon.this,
                                         "Сначала выберите ось пользователя", Toast.LENGTH_SHORT).show();
                             }
+                        } else if (tabIndex == 2) {
+                            if (selectedToolAxis >= 0) {
+                                present.setToolJogMove(selectedToolCoordAxis, false);
+                            } else {
+                                Toast.makeText(MainActivityEpsilon.this,
+                                        "Сначала выберите ось инструмента", Toast.LENGTH_SHORT).show();
+                            }
                         }
                         return true;
-
                     case MotionEvent.ACTION_UP:
                         present.stopMove();
                         return true;
@@ -628,23 +641,34 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         toolButtons[4] = findViewById(R.id.ry_btn);
         toolButtons[5] = findViewById(R.id.rz_btn);
 
-        setupToolAxisListeners();
-
-        for (int i = 0; i < toolTexts.length; i++) {
+        for (int i = 0; i < toolButtons.length; i++) {
             final int axisIndex = i;
-            toolTexts[i].setOnClickListener(new View.OnClickListener() {
+            toolButtons[i].setOnTouchListener(new View.OnTouchListener() {
                 @Override
-                public void onClick(View v) {
-                    // Сброс выделения всех осей
-                    for (int j = 0; j < toolTexts.length; j++) {
-                        toolTexts[j].setBackgroundColor(Color.TRANSPARENT);
-                    }
-                    // Выделение выбранной оси
-                    v.setBackgroundColor(Color.parseColor("#E0E0E0"));
-                    selectedToolAxis = axisIndex;
+                public boolean onTouch(View v, MotionEvent event) {
+                    switch (event.getAction()) {
+                        case MotionEvent.ACTION_DOWN:
+                            // 1. Устанавливаем выбранную ось
+                            selectedToolCoordAxis = axisIndex;
 
-                    Log.d("TOOL_AXIS", "Selected tool axis: " + axisIndex);
-                    Toast.makeText(MainActivityEpsilon.this, "Вы выбрали ось " + getAxisName(axisIndex), Toast.LENGTH_SHORT).show();
+                            // 2. Сбрасываем выделение всех кнопок
+                            for (Button btn : toolButtons) {
+                                btn.setSelected(false);
+                            }
+
+                            // 3. Выделяем текущую кнопку
+                            v.setSelected(true);
+
+                            // 4. Начинаем движение
+                            present.setToolJogMove(axisIndex, true);
+                            return true;
+
+                        case MotionEvent.ACTION_UP:
+                            // Останавливаем движение
+                            present.stopMove();
+                            return true;
+                    }
+                    return false;
                 }
             });
         }
@@ -1137,23 +1161,5 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
     private void handleOptionButtonClick(int buttonId) {
         // Ваша логика обработки нажатия кнопки TODO() ВЫХОДЫ
         Toast.makeText(this, "Нажата кнопка " + buttonId, Toast.LENGTH_SHORT).show();
-    }
-
-    private void setupToolAxisListeners() {
-        for (int i = 0; i < toolTexts.length; i++) {
-            final int axisIndex = i;
-            toolTexts[i].setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    // Сброс выделения всех осей
-                    for (int j = 0; j < toolTexts.length; j++) {
-                        toolTexts[j].setBackgroundColor(Color.TRANSPARENT);
-                    }
-                    // Установка фона и переменной
-                    v.setBackgroundColor(Color.parseColor("#E0E0E0"));
-                    selectedToolAxis = axisIndex;
-                }
-            });
-        }
     }
 }

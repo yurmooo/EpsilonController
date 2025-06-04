@@ -56,6 +56,8 @@ public interface MainContract {
         void doMovL(double[] point);
 
         void doJointMovJ(double[] point);
+        void setToolJogMove(int axisIndex, boolean isPositive);
+        void setTool(int index);
 
         void stopMove();
         void stopScript();
