@@ -490,8 +490,8 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                                         "Сначала выберите ось пользователя", Toast.LENGTH_SHORT).show();
                             }
                         } else if (tabIndex == 2) { // Инструмент
-                            if (selectedToolCoordAxis >= 0) {
-                                present.setToolJogMove(selectedToolCoordAxis, true);
+                            if (selectedToolAxis >= 0) {
+                                present.setToolJogMove(selectedToolAxis, true);
                             } else {
                                 Toast.makeText(MainActivityEpsilon.this,
                                         "Сначала выберите ось инструмента", Toast.LENGTH_SHORT).show();
@@ -528,7 +528,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                             }
                         } else if (tabIndex == 2) {
                             if (selectedToolAxis >= 0) {
-                                present.setToolJogMove(selectedToolCoordAxis, false);
+                                present.setToolJogMove(selectedToolAxis, false);
                             } else {
                                 Toast.makeText(MainActivityEpsilon.this,
                                         "Сначала выберите ось инструмента", Toast.LENGTH_SHORT).show();
@@ -610,6 +610,10 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         j5_btn = findViewById(R.id.j5_btn);
         j6_btn = findViewById(R.id.j6_btn);
 
+        final Button[] jointButtons = new Button[] {
+                j1_btn, j2_btn, j3_btn, j4_btn, j5_btn, j6_btn
+        };
+
         toolTexts = new TextView[6];
         toolTexts[0] = findViewById(R.id.tool_x_text);
         toolTexts[1] = findViewById(R.id.tool_y_text);
@@ -642,33 +646,19 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         toolButtons[5] = findViewById(R.id.rz_btn);
 
         for (int i = 0; i < toolButtons.length; i++) {
-            final int axisIndex = i;
-            toolButtons[i].setOnTouchListener(new View.OnTouchListener() {
+            final int index = i;
+            toolButtons[i].setOnClickListener(new View.OnClickListener() {
                 @Override
-                public boolean onTouch(View v, MotionEvent event) {
-                    switch (event.getAction()) {
-                        case MotionEvent.ACTION_DOWN:
-                            // 1. Устанавливаем выбранную ось
-                            selectedToolCoordAxis = axisIndex;
+                public void onClick(View v) {
+                    selectedToolAxis = index;
 
-                            // 2. Сбрасываем выделение всех кнопок
-                            for (Button btn : toolButtons) {
-                                btn.setSelected(false);
-                            }
-
-                            // 3. Выделяем текущую кнопку
-                            v.setSelected(true);
-
-                            // 4. Начинаем движение
-                            present.setToolJogMove(axisIndex, true);
-                            return true;
-
-                        case MotionEvent.ACTION_UP:
-                            // Останавливаем движение
-                            present.stopMove();
-                            return true;
+                    // Сброс выделения
+                    for (Button btn : toolButtons) {
+                        btn.setSelected(false);
                     }
-                    return false;
+
+                    // Выделение текущей
+                    v.setSelected(true);
                 }
             });
         }
@@ -707,7 +697,20 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
 
             @Override
             public void onTabUnselected(TabLayout.Tab tab) {
-                // Можно добавить дополнительную логику при уходе с вкладки
+                // Снятие выделения с кнопок осей
+                for (Button btn : jointButtons) {
+                    btn.setSelected(false);
+                }
+                for (Button btn : userButtons) {
+                    btn.setSelected(false);
+                }
+                for (Button btn : toolButtons) {
+                    btn.setSelected(false);
+                }
+
+                // Сброс переменных выбранной оси
+                selectedAxis = -1;
+                selectedToolAxis = -1;
             }
 
             @Override
@@ -761,7 +764,6 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
             optionButtons[i-1].setTag(i); // Сохраняем номер кнопки в теге
         }
 
-        // В методе initView() добавьте:
         for (int i = 0; i < userButtons.length; i++) {
             final int axisIndex = i;
             userButtons[i].setOnTouchListener(new View.OnTouchListener() {
@@ -941,11 +943,11 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
             public void run() {
                 NumberFormat nf = NumberFormat.getInstance();
                 nf.setGroupingUsed(false);
-                nf.setMaximumFractionDigits(4);
+                nf.setMaximumFractionDigits(2);
 
                 for (int i = 0; i < getqActual.length; i++) {
                     getqActual[i] = (double) (Math.round(getqActual[i] * 10000)) / 10000;
-                    jogText[i].setText("J" + (i+1) + ": " + nf.format(getqActual[i]));
+                    jogText[i].setText(nf.format(getqActual[i]));
                 }
             }
         });
@@ -958,17 +960,17 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
             public void run() {
                 NumberFormat nf = NumberFormat.getInstance();
                 nf.setGroupingUsed(false);
-                nf.setMaximumFractionDigits(4);
+                nf.setMaximumFractionDigits(2);
 
                 for (int i = 0; i < toolVectorActual.length; i++) {
                     toolVectorActual[i] = (double) (Math.round(toolVectorActual[i] * 10000)) / 10000;
 
                     // Обновляем текст для всех типов координат
                     if (toolTexts[i] != null) {
-                        toolTexts[i].setText(getAxisName(i) + ": " + nf.format(toolVectorActual[i]));
+                        toolTexts[i].setText(nf.format(toolVectorActual[i]));
                     }
                     if (userTexts[i] != null) {
-                        userTexts[i].setText(getAxisName(i) + ": " + nf.format(toolVectorActual[i]));
+                        userTexts[i].setText(nf.format(toolVectorActual[i]));
                     }
                 }
             }

@@ -501,16 +501,6 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
         }
     }
 
-    public void sendCommand(String command) {
-        try {
-            OutputStream outputStream = socket.getOutputStream();
-            outputStream.write(command.getBytes());
-            outputStream.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     @Override
     public void setJogMove(boolean isCoordinate, int pos) {
         final String jogStr;
