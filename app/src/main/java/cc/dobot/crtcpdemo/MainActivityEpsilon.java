@@ -88,6 +88,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
     private LinearLayout logPanel;
     private ImageButton closeLogPanelButton;
     private boolean isLogPanelVisible = false;
+    private boolean isDragMode = false;
     private ListView logListView;
     private ArrayAdapter<String> logListAdapter;
     private ArrayList<String> logList = new ArrayList<>();
@@ -210,15 +211,6 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                 } else {
                     present.connectRobot(currentIP, dashPort, movePort, feedBackPort);
                     changeViewStats(true);
-
-                    handler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (present.isConnected()) {
-                                refreshEnableState(present.isEnable());
-                            }
-                        }
-                    }, 1000);
                 }
             }
         });
@@ -227,7 +219,6 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         enableRobot.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                present.setRobotPower(true);
                 present.setRobotEnable(!present.isEnable());
             }
         });
@@ -436,11 +427,15 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
 
         drag_mode = findViewById(R.id.drag_mode);
         drag_mode.setOnClickListener(new View.OnClickListener() {
-            private boolean isDragModeActive = false;
             @Override
             public void onClick(View view) {
+                isDragMode = !isDragMode;
+                present.setDragModeCommand(isDragMode);
+                resetDragModeIcon(isDragMode);
+
                 Toast.makeText(MainActivityEpsilon.this,
-                        "Функция в разработке", Toast.LENGTH_SHORT).show();
+                        isDragMode ? "Режим Drag включён" : "Режим Drag выключен",
+                        Toast.LENGTH_SHORT).show();
             }
         });
 

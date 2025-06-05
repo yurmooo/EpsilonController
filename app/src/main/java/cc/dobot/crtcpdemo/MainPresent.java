@@ -50,6 +50,7 @@ import cc.dobot.crtcpdemo.message.product.cr.CRMessageSetArmOrientation;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageSpeedFactor;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageStartPath;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageStopScript;
+import cc.dobot.crtcpdemo.message.product.cr.CRMessageTextCommand;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageTool;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageUser;
 
@@ -103,7 +104,6 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
     public MainPresent(MainContract.View view) {
         this.view = view;
         getAlarmJson();
-
     }
 
     @Override
@@ -484,6 +484,16 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
         byte DOarray = StateMessageClient.getInstance().getState().getDO()[i];
         int mod = index - 1 - i * 8;
         return DOarray >> mod & 0x01;
+    }
+
+    public void setDragModeCommand(boolean enable) {
+        String command = enable ? "StartDrag()" : "StopDrag()";
+
+        CRMessageTextCommand msg = new CRMessageTextCommand();
+        msg.setMessageString(command);
+
+        view.refreshLogList(true, msg.getMessageStringContent());
+        MoveMessageClient.getInstance().sendMsg(msg, null);
     }
 
     @Override

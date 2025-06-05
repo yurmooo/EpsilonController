@@ -35,6 +35,7 @@ public interface MainContract {
     }
 
     interface Present{
+        void setDragModeCommand(boolean enable);
         void setDigitalOutput(int index, boolean status);
         boolean isConnected();
         void connectRobot(String currentIP, int dashPort, int movePort, int feedBackPort);
