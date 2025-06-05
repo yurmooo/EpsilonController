@@ -1264,6 +1264,75 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/log_panel"
+        android:layout_width="280dp"
+        android:layout_height="match_parent"
+        android:background="#e0e0e0"
+        android:orientation="vertical"
+        android:elevation="10dp"
+        android:padding="8dp"
+        android:visibility="gone"
+        android:translationX="-280dp"
+        android:layout_gravity="start"
+        android:layout_marginTop="?attr/actionBarSize">
+
+        <!-- Заголовок с кнопкой закрытия -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toLeftOf="@id/close_log_panel"
+                android:text="Логи"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_centerVertical="true"
+                android:layout_toStartOf="@id/close_log_panel"/>
+
+            <ImageButton
+                android:id="@+id/close_log_panel"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentRight="true"
+                android:layout_centerVertical="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_close"
+                android:contentDescription="Закрыть"
+                android:padding="8dp"/>
+        </RelativeLayout>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <!-- Контент логов -->
+                <ListView
+                    android:id="@+id/log_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:divider="@android:color/darker_gray"
+                    android:dividerHeight="1dp"
+                    android:padding="4dp"
+                    android:background="@android:color/white"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:enabled="false" />
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+
+    <LinearLayout
         android:id="@+id/script_panel"
         android:layout_width="280dp"
         android:layout_height="match_parent"

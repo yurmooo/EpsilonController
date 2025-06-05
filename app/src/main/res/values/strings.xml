@@ -46,6 +46,6 @@
     <string name="log">Log</string>
     <string name="digital_input_text">Digital Inputs:</string>
     <string name="digital_outputs_text">Digital Outputs:</string>
-    <string name="send_msg">Send Msg:</string>
-    <string name="receive_msg">Receive Msg:</string>
+    <string name="send_msg">Отправлено:</string>
+    <string name="receive_msg">Получено:</string>
 </resources>

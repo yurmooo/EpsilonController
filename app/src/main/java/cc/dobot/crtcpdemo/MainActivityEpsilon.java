@@ -10,6 +10,8 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.widget.ListView;
+import android.widget.ArrayAdapter;
 import android.Manifest;
 import android.animation.ObjectAnimator;
 import android.app.AlertDialog;
@@ -83,6 +85,12 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
     ImageView connection_icon;
     TextView[] toolTexts;
     private int selectedToolAxis = -1;
+    private LinearLayout logPanel;
+    private ImageButton closeLogPanelButton;
+    private boolean isLogPanelVisible = false;
+    private ListView logListView;
+    private ArrayAdapter<String> logListAdapter;
+    private ArrayList<String> logList = new ArrayList<>();
     MainContract.Present present;
     private List<String> errorList = new ArrayList<>();
 //    private TextItemAdapter errorListAdapter;
@@ -231,6 +239,20 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                 present.resetRobot();
             }
         });
+
+        logListView = findViewById(R.id.log_list);
+
+        logListAdapter = new ArrayAdapter<>(
+                this,
+                R.layout.item_log,
+                R.id.log_item_text,
+                logList
+        );
+        logListView.setAdapter(logListAdapter);
+
+        logListView.setEnabled(false);
+        logListView.setClickable(false);
+        logListView.setFocusable(false);
 
         connection_icon = findViewById(R.id.connection_icon);
         dropdownPanel = findViewById(R.id.dropdown_panel);
@@ -395,17 +417,26 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
             }
         });
 
+        logPanel = findViewById(R.id.log_panel);
+        closeLogPanelButton = findViewById(R.id.close_log_panel);
+
         log_act = findViewById(R.id.log_act);
         log_act.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                Toast.makeText(MainActivityEpsilon.this,
-                        "Функция в разработке", Toast.LENGTH_SHORT).show();
+            public void onClick(View v) {
+                showLogPanel();
+            }
+        });
+        closeLogPanelButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hideLogPanel();
             }
         });
 
         drag_mode = findViewById(R.id.drag_mode);
         drag_mode.setOnClickListener(new View.OnClickListener() {
+            private boolean isDragModeActive = false;
             @Override
             public void onClick(View view) {
                 Toast.makeText(MainActivityEpsilon.this,
@@ -745,7 +776,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                 showLeftPanel();}
         });
 
-        for (int i = 0; i < 16; i++) {
+        for (int i = 0; i < 16; i++) { //TODO() РАБОЧИЙ ВАРИНАТ ВЫХОДОВ
             int resId = getResources().getIdentifier("btn_option" + (i + 1), "id", getPackageName());
             optionButtons[i] = findViewById(resId);
             final int outputIndex = i; // 0–15
@@ -753,10 +784,6 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
             optionButtons[i].setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    resetOptionButtonsColor();
-                    v.setBackgroundResource(R.drawable.button_option_selected);
-                    ((Button) v).setTextColor(getResources().getColor(android.R.color.white));
-
                     handleOptionButtonClick(outputIndex); // передаём 0–15
                 }
             });
@@ -941,7 +968,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
             public void run() {
                 NumberFormat nf = NumberFormat.getInstance();
                 nf.setGroupingUsed(false);
-                nf.setMaximumFractionDigits(2);
+                nf.setMaximumFractionDigits(4);
 
                 for (int i = 0; i < getqActual.length; i++) {
                     getqActual[i] = (double) (Math.round(getqActual[i] * 10000)) / 10000;
@@ -958,7 +985,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
             public void run() {
                 NumberFormat nf = NumberFormat.getInstance();
                 nf.setGroupingUsed(false);
-                nf.setMaximumFractionDigits(2);
+                nf.setMaximumFractionDigits(4);
 
                 for (int i = 0; i < toolVectorActual.length; i++) {
                     toolVectorActual[i] = (double) (Math.round(toolVectorActual[i] * 10000)) / 10000;
@@ -988,15 +1015,17 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
 
     @Override
     public void refreshLogList(final boolean isSend, final String log) {
-//        handler.post(new Runnable() {
-//            @Override
-//            public void run() {
-//
-//                logList.add((isSend?getString(R.string.send_msg):getString(R.string.receive_msg))+log);
-//                logListAdapter.notifyDataSetChanged();
-//            }
-//        });
-//TODO() Можно сделать вывод логов
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                String direction = isSend ? getString(R.string.send_msg) : getString(R.string.receive_msg);
+                logList.add(direction + log);
+                logListAdapter.notifyDataSetChanged();
+
+                // Автопрокрутка вниз
+                logListView.setSelection(logListAdapter.getCount() - 1);
+            }
+        });
     };
 
     @Override
@@ -1158,7 +1187,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         }
     }
 
-    private void handleOptionButtonClick(int index) {
+    private void handleOptionButtonClick(int index) { //TODO() РАБОЧИЙ ВАРИНАТ ВЫХОДОВ
         int outputNumber = index + 1;
 
         if (outputNumber < 1 || outputNumber > 16) {
@@ -1170,51 +1199,46 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         digitalOutputStatus[index] = !digitalOutputStatus[index];
         present.setDigitalOutput(outputNumber, digitalOutputStatus[index]);
 
-        // Обновление цвета кнопки
+        Button button = optionButtons[index];
         if (digitalOutputStatus[index]) {
-            optionButtons[index].setBackgroundResource(R.drawable.button_option_selected);
-            optionButtons[index].setTextColor(getResources().getColor(android.R.color.white));
+            button.setBackgroundResource(R.drawable.button_option_selected);
+            button.setTextColor(getResources().getColor(android.R.color.white));
+            button.setText(outputNumber + ":1");
         } else {
-            optionButtons[index].setBackgroundResource(R.drawable.button_option_default);
-            optionButtons[index].setTextColor(getResources().getColor(android.R.color.black));
+            button.setBackgroundResource(R.drawable.button_option_default);
+            button.setTextColor(getResources().getColor(android.R.color.black));
+            button.setText(outputNumber + ":0");
         }
     }
+private void showLogPanel() {
+    if (!isLogPanelVisible) {
+        logPanel.setVisibility(View.VISIBLE);
+        logPanel.animate()
+                .translationX(0)
+                .setDuration(300)
+                .withEndAction(new Runnable() {
+                    @Override
+                    public void run() {
+                        isLogPanelVisible = true;
+                        hideLeftPanel();
+                    }
+                });
+    }
+}
 
-//    private void handleOptionButtonClick(int buttonId) {
-//        int outputIndex = buttonId - 1;
-//
-//        // Проверка границ
-//        if (outputIndex < 0 || outputIndex >= digitalOutputStatus.length) {
-//            Toast.makeText(this, "Недопустимый номер выхода", Toast.LENGTH_SHORT).show();
-//            return;
-//        }
-//
-//        boolean currentState = digitalOutputStatus[outputIndex];
-//        boolean newState = !currentState;
-//        digitalOutputStatus[outputIndex] = newState;
-//
-//        // Отправка команды
-//        present.setDigitalOutput(outputIndex, newState);
-//
-//        // Обновление визуального состояния кнопки
-//        Button button = findViewById(getResources().getIdentifier("btn_option" + buttonId, "id", getPackageName()));
-//        if (button != null) {
-//            button.setBackgroundColor(newState ? Color.GREEN : Color.LTGRAY); // Подсветка состояния
-//        }
-//    }
-
-//    private void handleOptionButtonClick(int index) {
-//        // Переключаем состояние выхода
-//        digitalOutputStatus[index] = !digitalOutputStatus[index];
-//
-//        // Отправляем команду через presenter
-//        present.setDigitalOutput(index, digitalOutputStatus[index]);
-//
-//        // Обновим текст на кнопке (необязательно)
-//        int buttonId = getResources().getIdentifier("btn_option" + (index + 1), "id", getPackageName());
-//        Button button = findViewById(buttonId);
-//        button.setText(digitalOutputStatus[index] ? "ON" : "OFF");
-//
-//        Toast.makeText(this, "Выход " + (index + 1) + ": " + (digitalOutputStatus[index] ? "включен" : "выключен"), Toast.LENGTH_SHORT).show();
-//    }
+    private void hideLogPanel() {
+        if (isLogPanelVisible) {
+            logPanel.animate()
+                    .translationX(-logPanel.getWidth()) // смещение влево на ширину панели
+                    .setDuration(300)
+                    .withEndAction(new Runnable() {
+                        @Override
+                        public void run() {
+                            logPanel.setVisibility(View.GONE);
+                            isLogPanelVisible = false;
+                            showLeftPanel();
+                        }
+                    });
+        }
+    }
 }
