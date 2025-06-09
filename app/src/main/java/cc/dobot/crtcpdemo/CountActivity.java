@@ -1,17 +1,26 @@
 package cc.dobot.crtcpdemo;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
-import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
+import com.google.android.material.tabs.TabLayout;
 
-import java.text.NumberFormat;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import cc.dobot.crtcpdemo.client.StateMessageClient;
 import cc.dobot.crtcpdemo.data.AlarmData;
@@ -19,15 +28,17 @@ import cc.dobot.crtcpdemo.message.constant.Robot;
 
 public class CountActivity extends AppCompatActivity implements MainContract.View {
 
-    private ImageButton drag_mode, enableRobot, moreBTN, resetRobot, error_btn, emergencyStop;
-    private ImageView connection_icon;
-    private Button get_pos_btn1, get_pos_btn2, get_pos_btn3, connectRobot;
+    private ImageButton drag_mode, btn_back;
+    private Button get_pos_btn1, get_pos_btn2, get_pos_btn3;
     private TextView pos1, pos2, pos3;
+    private Map<Integer, LinearLayout> taskViews = new HashMap<>();
+    private int currentTaskIndex = 0;
     private double x1, y1, z1, rx1, ry1, rz1;
     private double x2, y2, z2, rx2, ry2, rz2;
     private double x3, y3, z3, rx3, ry3, rz3;
     private boolean isDragMode = false;
-
+    private LayoutInflater inflater;
+    private TaskViewModel viewModel;
     private MainContract.Present present;
 
     @Override
@@ -35,26 +46,43 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_count);
 
+        viewModel = new ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication()))
+                .get(TaskViewModel.class);
+        restorePositions();
+        inflater = LayoutInflater.from(this);
+        TabLayout tabLayout = findViewById(R.id.task_tabs);
+        FrameLayout taskContainer = findViewById(R.id.task_container);
+
+        // Создаём 3 вкладки
+        for (int i = 1; i <= 3; i++) {
+            tabLayout.addTab(tabLayout.newTab().setText("Задача " + i));
+        }
+
+        // Инициализируем первую задачу
+        LinearLayout firstTaskLayout = new LinearLayout(this);
+        firstTaskLayout.setOrientation(LinearLayout.VERTICAL);
+        taskViews.put(0, firstTaskLayout);
+        taskContainer.addView(firstTaskLayout);
+
+        // Обработка вкладок
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                int newIndex = tab.getPosition();
+                switchTaskView(newIndex);
+            }
+            @Override public void onTabUnselected(TabLayout.Tab tab) {}
+            @Override public void onTabReselected(TabLayout.Tab tab) {}
+        });
+
         initView();
         initListeners();
         present = new MainPresent(this);
     }
 
     private void initView() {
-        connection_icon = findViewById(R.id.connection_icon);
-        connectRobot = findViewById(R.id.button_connect_robot);
-
-        enableRobot = findViewById(R.id.button_change_enable);
-
-        moreBTN = findViewById(R.id.more_button);
-
-        resetRobot = findViewById(R.id.button_reset_robot);
-
-        error_btn = findViewById(R.id.error_btn);
-
-        emergencyStop = findViewById(R.id.button_emergency_stop);
-
         drag_mode = findViewById(R.id.drag_mode);
+        btn_back = findViewById(R.id.btn_back);
 
         get_pos_btn1 = findViewById(R.id.get_pos_btn1);
         get_pos_btn2 = findViewById(R.id.get_pos_btn2);
@@ -66,6 +94,17 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
     }
 
     private void initListeners() {
+        btn_back.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // Сохраняем позиции перед переходом
+                savePositions();
+
+                Intent intent = new Intent(CountActivity.this, MainActivityEpsilon.class);
+                startActivity(intent);
+            }
+        });
+
         drag_mode.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -82,6 +121,15 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
             }
         });
 
+        findViewById(R.id.add_block_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                View block = inflater.inflate(R.layout.task_element, null);
+                taskViews.get(currentTaskIndex).addView(block);
+                viewModel.addElementType(currentTaskIndex, R.layout.task_element);
+            }
+        });
+
         get_pos_btn1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -93,7 +141,7 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                     rx1 = coords[3];
                     ry1 = coords[4];
                     rz1 = coords[5];
-                    String text = String.format("X=%.4f, Y=%.4f, Z=%.4f\nRx=%.4f, Ry=%.4f, Rz=%.4f", x1, y1, z1, rx1, ry1, rz1);
+                    String text = String.format("X=%.4f, Y=%.4f\n Z=%.4f, Rx=%.4f\n Ry=%.4f, Rz=%.4f", x1, y1, z1, rx1, ry1, rz1);
                     pos1.setText(text);
                 } else {
                     pos1.setText("Данные недоступны");
@@ -112,7 +160,7 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                     rx2 = coords[3];
                     ry2 = coords[4];
                     rz2 = coords[5];
-                    String text = String.format("X=%.4f, Y=%.4f, Z=%.4f\nRx=%.4f, Ry=%.4f, Rz=%.4f", x2, y2, z2, rx2, ry2, rz2);
+                    String text = String.format("X=%.4f, Y=%.4f\n Z=%.4f, Rx=%.4f\n Ry=%.4f, Rz=%.4f", x2, y2, z2, rx2, ry2, rz2);
                     pos2.setText(text);
                 } else {
                     pos2.setText("Данные недоступны");
@@ -131,7 +179,7 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                     rx3 = coords[3];
                     ry3 = coords[4];
                     rz3 = coords[5];
-                    String text = String.format("X=%.4f, Y=%.4f, Z=%.4f\nRx=%.4f, Ry=%.4f, Rz=%.4f", x3, y3, z3, rx3, ry3, rz3);
+                    String text = String.format("X=%.4f, Y=%.4f\n Z=%.4f, Rx=%.4f\n Ry=%.4f, Rz=%.4f", x3, y3, z3, rx3, ry3, rz3);
                     pos3.setText(text);
                 } else {
                     pos3.setText("Данные недоступны");
@@ -140,84 +188,75 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
         });
     }
 
-    @Override
-    public void refreshConnectionState(boolean isConnected) {
-        connectRobot.setText(isConnected ? R.string.disconnect_robot : R.string.connect_robot);
-        if (isConnected) {
-            connection_icon.setImageResource(R.drawable.ic_wifi_green);
-        } else {
-            connection_icon.setImageResource(R.drawable.ic_wifi);
+    private void savePositions() {
+        if (pos1.getText() != null) {
+            viewModel.savePosition(1, pos1.getText().toString());
+        }
+        if (pos2.getText() != null) {
+            viewModel.savePosition(2, pos2.getText().toString());
+        }
+        if (pos3.getText() != null) {
+            viewModel.savePosition(3, pos3.getText().toString());
         }
     }
 
-    @Override
-    public void refreshPowerState(boolean isPowerOn) {
+    private void restorePositions() {
+        String pos1Data = viewModel.getPosition(1);
+        if (pos1Data != null) {
+            pos1.setText(pos1Data);
+        }
 
-    }
+        String pos2Data = viewModel.getPosition(2);
+        if (pos2Data != null) {
+            pos2.setText(pos2Data);
+        }
 
-    @Override
-    public void refreshEnableState(boolean isEnable) {
-        if (isEnable) {
-            enableRobot.setImageResource(R.drawable.ic_pause);
-        } else {
-            enableRobot.setImageResource(R.drawable.ic_play);
+        String pos3Data = viewModel.getPosition(3);
+        if (pos3Data != null) {
+            pos3.setText(pos3Data);
         }
     }
 
-    public void resetDragModeIcon(boolean isDragEnabled) {
-        if (isDragEnabled) {
-            drag_mode.setImageResource(R.drawable.ic_dragred);
-        } else {
-            drag_mode.setImageResource(R.drawable.ic_drag);
+    private void switchTaskView(int newIndex) {
+        FrameLayout container = findViewById(R.id.task_container);
+        container.removeAllViews();
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        taskViews.put(newIndex, layout);
+
+        // Восстановление сохранённых элементов с правильными типами
+        List<Integer> elementTypes = viewModel.getElementTypes(newIndex);
+        if (elementTypes != null) {
+            for (Integer type : elementTypes) {
+                View block = inflater.inflate(type, null); // Используйте сохранённый тип
+                layout.addView(block);
+            }
         }
+
+        container.addView(layout);
+        currentTaskIndex = newIndex;
     }
 
     @Override
-    public void refreshSpeedScaling(int speedScaling) {
-
+    protected void onDestroy() {
+        savePositions();
+        super.onDestroy();
     }
 
-    @Override
-    public void refreshRobotMode(Robot.Mode mode) {
-
-    }
-
-    @Override
-    public void refreshDI(byte[] DI) {
-    }
-
-    @Override
-    public void refreshDO(byte[] DO) {
-
-    }
-
-    @Override
-    public void refreshQActual(double[] getqActual) {
-
-    }
-
-    @Override
-    public void refreshToolVectorActual(double[] toolVectorActual) {
-
-    }
-
-    @Override
-    public void refreshProgramState(int programState) {
-
-    }
-
-    @Override
-    public void refreshErrorList(String errorInfo) {
-
-    }
-
-    @Override
-    public void refreshLogList(boolean isSend, String log) {
-
-    }
-
-    @Override
-    public void refreshAlarmList(List<AlarmData> dataList) {
-
-    }
+    // Реализация MainContract.View (можно оставить пустыми)
+    @Override public void refreshConnectionState(boolean isConnected) {}
+    @Override public void refreshPowerState(boolean isPowerOn) {}
+    @Override public void refreshEnableState(boolean isEnable) {}
+    @Override public void resetDragModeIcon(boolean isDrag) {}
+    @Override public void refreshSpeedScaling(int speedScaling) {}
+    @Override public void refreshRobotMode(Robot.Mode mode) {}
+    @Override public void refreshDI(byte[] DI) {}
+    @Override public void refreshDO(byte[] DO) {}
+    @Override public void refreshQActual(double[] getqActual) {}
+    @Override public void refreshToolVectorActual(double[] toolVectorActual) {}
+    @Override public void refreshProgramState(int programState) {}
+    @Override public void refreshErrorList(String errorInfo) {}
+    @Override public void refreshLogList(boolean isSend, String log) {}
+    @Override public void refreshAlarmList(List<AlarmData> dataList) {}
 }
