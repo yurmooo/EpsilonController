@@ -94,6 +94,11 @@ public class StateMessageClient extends TcpClient {
         state.setDO(data.getSubBodyData(14, 22));
         state.setMode(Robot.Mode.getMode((int) TransformUtils.bytesToLong(
                 data.getSubBodyData(22, 30), 0, true)));
+        Robot.Mode mode = Robot.Mode.getMode((int) TransformUtils.bytesToLong(
+                data.getSubBodyData(22, 30), 0, true));
+        state.setMode(mode);
+        state.setEnable(mode == Robot.Mode.ROBOT_MODE_IDLE || mode == Robot.Mode.ROBOT_MODE_RUNNING);
+        state.setDrag(mode == Robot.Mode.ROBOT_MODE_BACKDRIVE);
         state.setSpeedScaling((int) TransformUtils.bytesToDouble(
                 data.getSubBodyData(62, 70)));
         state.setProgramState((int) TransformUtils.bytesToDouble(

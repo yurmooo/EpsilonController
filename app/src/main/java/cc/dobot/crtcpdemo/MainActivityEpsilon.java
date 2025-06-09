@@ -2,41 +2,29 @@ package cc.dobot.crtcpdemo;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.PopupMenu;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.GravityCompat;
-import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import android.widget.ListView;
 import android.widget.ArrayAdapter;
 import android.Manifest;
-import android.animation.ObjectAnimator;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.animation.Animator;
@@ -44,13 +32,10 @@ import android.animation.AnimatorListenerAdapter;
 
 import com.google.android.material.tabs.TabLayout;
 
-import java.io.File;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
-import cc.dobot.crtcpdemo.adapter.TextItemAdapter;
 import cc.dobot.crtcpdemo.data.AlarmData;
 import cc.dobot.crtcpdemo.message.constant.Robot;
 
@@ -81,7 +66,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
     TextView jogText[];
     RelativeLayout leftPanel;
     LinearLayout centerPanel, rightPanel, scriptPanel, dropdownPanel;
-    ImageButton collapseButton, expandButton;
+    ImageButton collapseButton, expandButton, plus_btn, minus_btn;
     ImageView connection_icon;
     TextView[] toolTexts;
     private int selectedToolAxis = -1;
@@ -92,6 +77,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
     private ListView logListView;
     private ArrayAdapter<String> logListAdapter;
     private ArrayList<String> logList = new ArrayList<>();
+    private Toast singleToast;
     MainContract.Present present;
     private List<String> errorList = new ArrayList<>();
 //    private TextItemAdapter errorListAdapter;
@@ -114,6 +100,17 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         speedRatioEdit.setEnabled(b);
         getPosBTN.setEnabled(b);
         error_btn.setEnabled(b);
+        moreBTN.setEnabled(b);
+        resetRobot.setEnabled(b);
+        emergencyStop.setEnabled(b);
+        settings.setEnabled(b);
+        script.setEnabled(b);
+        block_script.setEnabled(b);
+        log_act.setEnabled(b);
+        drag_mode.setEnabled(b);
+        plus_btn.setEnabled(b);
+        minus_btn.setEnabled(b); //TODO() можно сделать оповещение о просьбе подключиться к роботу
+
         // TabLayout jogMoveTab;
 //        for (Button btn:jogMinusBtn)
 //            btn.setEnabled(b);
@@ -121,6 +118,14 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
 //            btn.setEnabled(b);
 
 //        findViewById(R.id.button_clear_error_info_list).setEnabled(b);
+    }
+
+    private void showSingleToast(String message) {
+        if (singleToast != null) {
+            singleToast.cancel();
+        }
+        singleToast = Toast.makeText(this, message, Toast.LENGTH_SHORT);
+        singleToast.show();
     }
 
     @Override
@@ -183,8 +188,8 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
             public void onClick(View v) {
                 String ip = ipAddressEdit.getText().toString();
                 if (!isValidIpAddress(ip)) {
-                    Toast.makeText(MainActivityEpsilon.this,
-                            "Неверный формат IP-адреса", Toast.LENGTH_SHORT).show();
+                    showSingleToast(
+                            "Неверный формат IP-адреса");
                     return;
                 }
                 currentIP = ip;
@@ -194,8 +199,8 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                     movePort = Integer.parseInt(movePortEdit.getText().toString());
                     feedBackPort = Integer.parseInt(feedBackPortEdit.getText().toString());
                 } catch (NumberFormatException e) {
-                    Toast.makeText(MainActivityEpsilon.this,
-                            "Неверный формат порта", Toast.LENGTH_SHORT).show();
+                    showSingleToast(
+                            "Неверный формат порта");
                     return;
                 }
 
@@ -241,7 +246,6 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         );
         logListView.setAdapter(logListAdapter);
 
-        logListView.setEnabled(false);
         logListView.setClickable(false);
         logListView.setFocusable(false);
 
@@ -371,8 +375,8 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                 if (isValidIpAddress(newIp)) {
                     currentIP = newIp;
                 } else {
-                    Toast.makeText(MainActivityEpsilon.this,
-                            "Неверный формат IP-адреса", Toast.LENGTH_SHORT).show();
+                    showSingleToast(
+                            "Неверный формат IP-адреса");
                     return;
                 }
 
@@ -381,11 +385,11 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                     movePort = Integer.parseInt(movePortEdit.getText().toString());
                     feedBackPort = Integer.parseInt(feedBackPortEdit.getText().toString());
 
-                    Toast.makeText(MainActivityEpsilon.this,
-                            "Настройки сохранены", Toast.LENGTH_SHORT).show();
+                    showSingleToast(
+                            "Настройки сохранены");
                 } catch (NumberFormatException e) {
-                    Toast.makeText(MainActivityEpsilon.this,
-                            "Неверный формат порта", Toast.LENGTH_SHORT).show();
+                    showSingleToast(
+                            "Неверный формат порта");
                 }
             }
         });
@@ -394,8 +398,8 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         script.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Toast.makeText(MainActivityEpsilon.this,
-                        "Функция в разработке", Toast.LENGTH_SHORT).show();
+                showSingleToast(
+                        "Функция в разработке");
             }
         });
 
@@ -403,8 +407,9 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         block_script.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Toast.makeText(MainActivityEpsilon.this,
-                        "Функция в разработке", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(MainActivityEpsilon.this, CountActivity.class);
+                startActivity(intent);
+                overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
             }
         });
 
@@ -496,6 +501,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
             }
         });
 
+        plus_btn = findViewById(R.id.plus_btn);
         findViewById(R.id.plus_btn).setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -506,22 +512,22 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                             if (selectedAxis >= 0) {
                                 present.setJogMove(false, selectedAxis);
                             } else {
-                                Toast.makeText(MainActivityEpsilon.this,
-                                        "Сначала выберите ось", Toast.LENGTH_SHORT).show();
+                                showSingleToast(
+                                        "Сначала выберите ось");
                             }
                         } else if (tabIndex == 1) { // Пользователь
                             if (selectedToolAxis >= 0) {
                                 present.setJogMove(true, selectedToolAxis);
                             } else {
-                                Toast.makeText(MainActivityEpsilon.this,
-                                        "Сначала выберите ось пользователя", Toast.LENGTH_SHORT).show();
+                                showSingleToast(
+                                        "Сначала выберите ось пользователя");
                             }
                         } else if (tabIndex == 2) { // Инструмент
                             if (selectedToolAxis >= 0) {
                                 present.setToolJogMove(selectedToolAxis, true);
                             } else {
-                                Toast.makeText(MainActivityEpsilon.this,
-                                        "Сначала выберите ось инструмента", Toast.LENGTH_SHORT).show();
+                                showSingleToast(
+                                        "Сначала выберите ось инструмента");
                             }
                         }
                         return true;
@@ -533,6 +539,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
             }
         });
 
+        minus_btn = findViewById(R.id.minus_btn);
         findViewById(R.id.minus_btn).setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -543,22 +550,22 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                             if (selectedAxis >= 0) {
                                 present.setJogMove(false, selectedAxis + 6);
                             } else {
-                                Toast.makeText(MainActivityEpsilon.this,
-                                        "Сначала выберите ось", Toast.LENGTH_SHORT).show();
+                                showSingleToast(
+                                        "Сначала выберите ось");
                             }
                         } else if (tabIndex == 1) {
                             if (selectedToolAxis >= 0) {
                                 present.setJogMove(true, selectedToolAxis + 6);
                             } else {
-                                Toast.makeText(MainActivityEpsilon.this,
-                                        "Сначала выберите ось пользователя", Toast.LENGTH_SHORT).show();
+                                showSingleToast(
+                                        "Сначала выберите ось пользователя");
                             }
                         } else if (tabIndex == 2) {
                             if (selectedToolAxis >= 0) {
                                 present.setToolJogMove(selectedToolAxis, false);
                             } else {
-                                Toast.makeText(MainActivityEpsilon.this,
-                                        "Сначала выберите ось инструмента", Toast.LENGTH_SHORT).show();
+                                showSingleToast(
+                                        "Сначала выберите ось инструмента");
                             }
                         }
                         return true;
@@ -1165,7 +1172,8 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         }
     }
 
-    private void resetDragModeIcon(boolean isDrag) {
+    @Override
+    public void resetDragModeIcon(boolean isDrag) {
         if (isDrag) {
             drag_mode.setImageResource(R.drawable.ic_dragred);
         } else {
@@ -1186,7 +1194,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         int outputNumber = index + 1;
 
         if (outputNumber < 1 || outputNumber > 16) {
-            Toast.makeText(this, "Недопустимый номер выхода", Toast.LENGTH_SHORT).show();
+            showSingleToast("Недопустимый номер выхода");
             return;
         }
 
@@ -1205,21 +1213,22 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
             button.setText(outputNumber + ":0");
         }
     }
-private void showLogPanel() {
-    if (!isLogPanelVisible) {
-        logPanel.setVisibility(View.VISIBLE);
-        logPanel.animate()
-                .translationX(0)
-                .setDuration(300)
-                .withEndAction(new Runnable() {
-                    @Override
-                    public void run() {
-                        isLogPanelVisible = true;
-                        hideLeftPanel();
-                    }
-                });
+
+    private void showLogPanel() {
+        if (!isLogPanelVisible) {
+            logPanel.setVisibility(View.VISIBLE);
+            logPanel.animate()
+                    .translationX(0)
+                    .setDuration(300)
+                    .withEndAction(new Runnable() {
+                        @Override
+                        public void run() {
+                            isLogPanelVisible = true;
+                            hideLeftPanel();
+                        }
+                    });
+        }
     }
-}
 
     private void hideLogPanel() {
         if (isLogPanelVisible) {

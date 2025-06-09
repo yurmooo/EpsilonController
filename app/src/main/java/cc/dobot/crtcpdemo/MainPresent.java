@@ -600,6 +600,9 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
                 view.refreshProgramState(state.getProgramState());
                 view.refreshQActual(state.getqActual());
                 view.refreshToolVectorActual(state.getToolVectorActual());
+
+                view.refreshEnableState(state.isEnable());
+                view.resetDragModeIcon(state.isDrag());
             }
         });
 

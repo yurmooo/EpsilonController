@@ -12,6 +12,7 @@ public interface MainContract {
         void refreshPowerState(boolean isPowerOn);
 
         void refreshEnableState(boolean isEnable);
+        void resetDragModeIcon(boolean isDrag);
 
         void refreshSpeedScaling(int speedScaling);
 

@@ -42,5 +42,13 @@
             android:configChanges="orientation|screenSize|locale|layoutDirection"
             android:launchMode="singleTask"
             android:exported="true"/>
+
+        <!-- CountActivity -->
+        <activity
+            android:name=".CountActivity"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|locale|layoutDirection"
+            android:launchMode="singleTask"
+            android:exported="true"/>
     </application>
 </manifest>

@@ -28,6 +28,9 @@ public class RobotState {
     double []mTarget;
     double []qActual;
     double []toolVectorActual;
+    boolean isEnable;
+    boolean isDrag;
+
 
 
     public RobotState() {
@@ -108,5 +111,19 @@ public class RobotState {
         this.toolVectorActual = toolVectorActual;
     }
 
+    public boolean isEnable() {
+        return isEnable;
+    }
 
+    public void setEnable(boolean enable) {
+        this.isEnable = enable;
+    }
+
+    public boolean isDrag() {
+        return isDrag;
+    }
+
+    public void setDrag(boolean drag) {
+        this.isDrag = drag;
+    }
 }

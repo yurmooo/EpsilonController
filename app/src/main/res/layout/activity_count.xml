@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Toolbar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="0dp"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@android:color/white"
+        android:elevation="4dp"
+        app:title="Epsilon Panel"
+        app:titleTextColor="@android:color/black"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:weightSum="10">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <!-- Логотип -->
+                <ImageView
+                    android:id="@+id/epsilon_icon"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_epsilon"
+                    android:contentDescription="Icon_Epsilon"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:layout_gravity="center_vertical"/>
+
+                <!-- Название компании -->
+                <TextView
+                    android:id="@+id/name_company"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Академия\nEpsilon"
+                    android:textColor="@android:color/black"
+                    android:textSize="16sp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_gravity="center_vertical"/>
+
+                <!-- Блок иконок и кнопок -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="7"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:weightSum="7">
+
+                    <!-- Группа элементов с весами -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="2"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:layout_marginLeft="8pt">
+
+                        <ImageView
+                            android:id="@+id/connection_icon"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_wifi"
+                            android:contentDescription="Icon_Connection" />
+
+                        <Button
+                            android:id="@+id/button_connect_robot"
+                            android:layout_width="0dp"
+                            android:layout_height="48dp"
+                            android:layout_weight="1"
+                            android:text="ON"
+                            android:textColor="@android:color/black"
+                            android:textSize="14sp"
+                            android:singleLine="true"
+                            android:ellipsize="none"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:gravity="center"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginEnd="4dp"/>
+                    </LinearLayout>
+
+                    <!--Кнопка включения перенес ее в enableRobot (button_change_enable)-->
+                    <!--                        <ImageButton-->
+                    <!--                            android:id="@+id/button_change_power"-->
+                    <!--                            android:layout_width="28dp"-->
+                    <!--                            android:layout_height="28dp"-->
+                    <!--                            android:src="@drawable/ic_power"-->
+                    <!--                            android:contentDescription="Power_Btn"-->
+                    <!--                            android:background="?attr/selectableItemBackgroundBorderless"-->
+                    <!--                            android:padding="8dp"-->
+                    <!--                            android:layout_marginStart="8dp"-->
+                    <!--                            android:layout_marginEnd="8dp" />-->
+
+                    <!--                        <View-->
+                    <!--                            android:layout_width="1dp"-->
+                    <!--                            android:layout_height="30dp"-->
+                    <!--                            android:layout_marginHorizontal="8dp"-->
+                    <!--                            android:background="@android:color/black"/>-->
+
+                    <ImageButton
+                        android:id="@+id/button_change_enable"
+                        android:layout_width="0dp"
+                        android:layout_height="28dp"
+                        android:layout_weight="1"
+                        android:src="@drawable/ic_play"
+                        android:contentDescription="Icon_Stop"
+                        android:background="@drawable/button_selector"
+                        android:padding="8dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"/>
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="30dp"
+                        android:layout_marginHorizontal="8dp"
+                        android:background="@android:color/black"/>
+
+                    <ImageButton
+                        android:id="@+id/more_button"
+                        android:layout_width="0dp"
+                        android:layout_height="28dp"
+                        android:layout_weight="1"
+                        android:src="@drawable/ic_hub"
+                        android:contentDescription="Icon_MoreInfo"
+                        android:background="@drawable/button_selector"
+                        android:padding="8dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"/>
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="30dp"
+                        android:layout_marginHorizontal="8dp"
+                        android:background="@android:color/black"/>
+
+                    <ImageButton
+                        android:id="@+id/button_reset_robot"
+                        android:layout_width="0dp"
+                        android:layout_height="28dp"
+                        android:layout_weight="1"
+                        android:src="@drawable/reset_btn"
+                        android:contentDescription="Reset"
+                        android:background="@drawable/button_selector"
+                        android:tint="@android:color/black"
+                        android:padding="8dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"/>
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="30dp"
+                        android:layout_marginHorizontal="8dp"
+                        android:background="@android:color/black"/>
+
+                    <ImageButton
+                        android:id="@+id/error_btn"
+                        android:layout_width="0dp"
+                        android:layout_height="28dp"
+                        android:layout_weight="1"
+                        android:src="@drawable/ic_error24"
+                        android:contentDescription="@string/error_info"
+                        android:background="@drawable/button_selector"
+                        android:padding="8dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"/>
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="30dp"
+                        android:layout_marginHorizontal="8dp"
+                        android:background="@android:color/black"/>
+
+                    <ImageButton
+                        android:id="@+id/button_emergency_stop"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_weight="1"
+                        android:src="@drawable/ic_emergencystop"
+                        android:contentDescription="@string/emergency_stop"
+                        android:scaleType="fitCenter"
+                        android:background="@drawable/button_selector"
+                        android:elevation="6dp"
+                        android:importantForAccessibility="yes"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"/>
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.appcompat.widget.Toolbar>
+
+    <!-- Горизонтальный Guideline для отступа слева -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/start_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_begin="16dp" />
+
+    <!-- ImageButton слева (Drag Mode) -->
+    <ImageButton
+        android:id="@+id/drag_mode"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:src="@drawable/ic_drag"
+        android:background="@drawable/button_selector"
+        android:contentDescription="Drag Mode"
+        android:padding="8dp"
+        app:layout_constraintStart_toStartOf="@id/start_guideline"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        android:layout_marginTop="12dp"/>
+
+    <!-- Первая пара -->
+    <Button
+        android:id="@+id/get_pos_btn1"
+        android:layout_width="120dp"
+        android:layout_height="wrap_content"
+        android:text="Точка 1"
+        android:textSize="14sp"
+        app:layout_constraintStart_toStartOf="@id/start_guideline"
+        app:layout_constraintTop_toBottomOf="@id/drag_mode"
+        android:layout_marginTop="12dp"/>
+
+    <TextView
+        android:id="@+id/pos1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="8dp"
+        android:text="X=0, Y=0, Z=0\nRx=0, Ry=0, Rz=0"
+        android:textSize="13sp"
+        android:maxLines="2"
+        app:layout_constraintStart_toEndOf="@id/get_pos_btn1"
+        app:layout_constraintTop_toTopOf="@id/get_pos_btn1"
+        android:layout_marginStart="8dp"/>
+
+    <!-- Вторая пара -->
+    <Button
+        android:id="@+id/get_pos_btn2"
+        android:layout_width="120dp"
+        android:layout_height="wrap_content"
+        android:text="Точка 2"
+        android:textSize="14sp"
+        app:layout_constraintStart_toStartOf="@id/start_guideline"
+        app:layout_constraintTop_toBottomOf="@id/get_pos_btn1"
+        android:layout_marginTop="12dp"/>
+
+    <TextView
+        android:id="@+id/pos2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="8dp"
+        android:text="X=0, Y=0, Z=0\nRx=0, Ry=0, Rz=0"
+        android:textSize="13sp"
+        android:maxLines="2"
+        app:layout_constraintStart_toEndOf="@id/get_pos_btn2"
+        app:layout_constraintTop_toTopOf="@id/get_pos_btn2"
+        android:layout_marginStart="8dp"/>
+
+    <!-- Третья пара -->
+    <Button
+        android:id="@+id/get_pos_btn3"
+        android:layout_width="120dp"
+        android:layout_height="wrap_content"
+        android:text="Точка 3"
+        android:textSize="14sp"
+        app:layout_constraintStart_toStartOf="@id/start_guideline"
+        app:layout_constraintTop_toBottomOf="@id/get_pos_btn2"
+        android:layout_marginTop="12dp"/>
+
+    <TextView
+        android:id="@+id/pos3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="8dp"
+        android:text="X=0, Y=0, Z=0\nRx=0, Ry=0, Rz=0"
+        android:textSize="13sp"
+        android:maxLines="2"
+        app:layout_constraintStart_toEndOf="@id/get_pos_btn3"
+        app:layout_constraintTop_toTopOf="@id/get_pos_btn3"
+        android:layout_marginStart="8dp"/>
+</androidx.constraintlayout.widget.ConstraintLayout>
