@@ -103,7 +103,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         moreBTN.setEnabled(b);
         resetRobot.setEnabled(b);
         emergencyStop.setEnabled(b);
-        settings.setEnabled(b);
+//        settings.setEnabled(b);
         script.setEnabled(b);
         block_script.setEnabled(b);
         log_act.setEnabled(b);

@@ -372,6 +372,14 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
     }
 
     @Override
+    public void doTestRun(List<double[]> points) {
+        for (double[] p : points) {
+            doMovJ(p);  // либо doMovL, если нужен линейный путь
+            try { Thread.sleep(500); } catch (InterruptedException ignored) { }
+        }
+    }
+
+    @Override
     public void doJointMovJ(final double[] point) {
         BaseMessage message;
         message = (BaseMessage) MessageFactory.getInstance().createMsg(CmdSet.ENABLE_ROBOT);

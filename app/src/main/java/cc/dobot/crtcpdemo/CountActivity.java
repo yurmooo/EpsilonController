@@ -6,6 +6,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -19,6 +21,7 @@ import com.google.android.material.tabs.TabLayout;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +53,12 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
     private double[] norm;
     private double OKR;
     private boolean isDragMode = false;
+    private final Map<Integer, List<View>> taskBlocksMap = new HashMap<>();
+    private int col_Step_1, col_Step_2;
+    private double delta_Rx_1, delta_Ry_1, delta_Rz_1;
+    private double delta_Rx_2, delta_Ry_2, delta_Rz_2;
+    private int CS;
+    private double Rotate;
     private LayoutInflater inflater;
     private TaskViewModel viewModel;
     private MainContract.Present present;
@@ -151,10 +160,10 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
             @Override
             public void onClick(View v) {
                 LayoutInflater inflater = LayoutInflater.from(CountActivity.this);
-                View block = inflater.inflate(R.layout.task_element, null);
+                final View block = inflater.inflate(R.layout.task_element, null);
                 Spinner spinner = block.findViewById(R.id.spinner_type);
 
-                String[] types = new String[]{"Линейно", "Пила", "Зиг-Заг"};
+                String[] types = new String[]{"Линейно", "Пила", "Зиг-Заг", "По кругу", "По окружности"};
                 ArrayAdapter<String> adapter = new ArrayAdapter<>(
                         CountActivity.this,
                         android.R.layout.simple_spinner_item,
@@ -162,6 +171,52 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                 );
                 adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                 spinner.setAdapter(adapter);
+
+                int idx = currentTaskIndex;
+                if (!taskBlocksMap.containsKey(idx)) {
+                    taskBlocksMap.put(idx, new ArrayList<View>());
+                }
+                taskBlocksMap.get(idx).add(block);
+
+                Button btnAction = (Button) block.findViewById(R.id.btn_action);
+                btnAction.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        List<View> blocks = taskBlocksMap.get(currentTaskIndex);
+                        int blockIndex = blocks.indexOf(block);
+
+                        // Получение данных из элементов
+                        CheckBox checkBox = (CheckBox) block.findViewById(R.id.checkbox_select);
+                        Spinner spinner = (Spinner) block.findViewById(R.id.spinner_type);
+                        EditText width = (EditText) block.findViewById(R.id.input_width);
+                        EditText height = (EditText) block.findViewById(R.id.input_height);
+                        EditText step = (EditText) block.findViewById(R.id.input_step);
+                        EditText speed = (EditText) block.findViewById(R.id.input_speed);
+                        Button actionBtn = (Button) block.findViewById(R.id.btn_action);
+
+                        // Формирование текста лога
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("Блок #").append(blockIndex).append("\n");
+                        sb.append("  - Checked: ").append(checkBox.isChecked()).append("\n");
+                        sb.append("  - Тип: ").append(spinner.getSelectedItem()).append("\n");
+                        sb.append("  - Ширина: ").append(width.getText().toString()).append("\n");
+                        sb.append("  - Высота: ").append(height.getText().toString()).append("\n");
+                        sb.append("  - Шаг: ").append(step.getText().toString()).append("\n");
+                        sb.append("  - Скорость: ").append(speed.getText().toString()).append("\n");
+                        sb.append("  - Кнопка: ").append(actionBtn.getText().toString());
+
+                        Log.d("TASK_DATA", sb.toString());
+
+                        // Запуск тестового прохода по точкам
+                        List<double[]> arcPath = generateArcPath();
+                        if (arcPath.isEmpty()) {
+                            Toast.makeText(CountActivity.this, "Нет точек для теста", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        present.doTestRun(arcPath);
+                    }
+                });
 
                 taskViews.get(currentTaskIndex).addView(block);
                 viewModel.addElementType(currentTaskIndex, R.layout.task_element);
@@ -290,6 +345,38 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                 Toast.makeText(CountActivity.this, "Значения сохранены", Toast.LENGTH_SHORT).show();  // Исправлен контекст
             }
         });
+    }
+
+    private List<double[]> getJogPoints() {
+        List<double[]> pts = new ArrayList<>();
+        TextView[] posViews = new TextView[]{pos1, pos2, pos3};
+
+        for (TextView tv : posViews) {
+            String text = tv.getText().toString().trim();
+            if (!text.startsWith("X=")) continue;
+
+            try {
+                // Пример строки:
+                // X=0, Y=0, Z=0\nRx=0, Ry=0, Rz=0
+                String[] lines = text.split("\n");
+                String[] xyz = lines[0].replace("X=", "").replace("Y=", "").replace("Z=", "").split(", ");
+                String[] rxyz = lines[1].replace("Rx=", "").replace("Ry=", "").replace("Rz=", "").split(", ");
+
+                double[] point = new double[6];
+                point[0] = Double.parseDouble(xyz[0]);
+                point[1] = Double.parseDouble(xyz[1]);
+                point[2] = Double.parseDouble(xyz[2]);
+                point[3] = Double.parseDouble(rxyz[0]);
+                point[4] = Double.parseDouble(rxyz[1]);
+                point[5] = Double.parseDouble(rxyz[2]);
+
+                pts.add(point);
+            } catch (Exception e) {
+                Log.e("getJogPoints", "Ошибка парсинга координат: " + e.getMessage());
+            }
+        }
+
+        return pts;
     }
 
     private void toggleDropdownMenu() {
@@ -710,31 +797,31 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
 
         double col_Step = (dlina_Dugi/Step);
         Log.d("TRAJ", "Длина шва: " + String.format("%.1f", dlina_Dugi) + " мм");
-        int CS = (int) Math.floor(col_Step);
-        double Rotate = (Ugol/CS);
+        this.CS = (int) Math.floor(col_Step);
+        this.Rotate = (Ugol/CS);
 
         // Вычисляем параметры для первой части траектории (START-MID)
         double Ugol_1 = mid_coner_save - start_coner_save;
         double dlina_Dugi_1 = ((Math.abs(Ugol_1)/Math.PI)/2)*OKR;
-        int col_Step_1 = (int) Math.floor(dlina_Dugi_1/Step);
+        this.col_Step_1 = (int) Math.floor(dlina_Dugi_1/Step);
         double Rotate_1 = Ugol_1/col_Step_1;
 
         // Вычисляем параметры для второй части траектории (MID-END)
         double Ugol_2 = end_coner_save - mid_coner_save;
         double dlina_Dugi_2 = ((Math.abs(Ugol_2)/Math.PI)/2)*OKR;
-        int col_Step_2 = (int) Math.floor(dlina_Dugi_2/Step);
+        this.col_Step_2 = (int) Math.floor(dlina_Dugi_2/Step);
         double Rotate_2 = Ugol_2/col_Step_2;
 
         R_Coordinates_Correction();
 
         // Вычисляем дельты для углов Эйлера
-        double delta_Rx_1 = (rx2 - rx1)/col_Step_1;  //TODO() а можешь объяснить почему в lua Rx_Start/col_Step_1 так, а у меня в коде (rx2 - rx1)/col_Step_1;
-        double delta_Ry_1 = (ry2 - ry1)/col_Step_1;
-        double delta_Rz_1 = (rz2 - rz1)/col_Step_1;
+        this.delta_Rx_1 = (rx2 - rx1)/col_Step_1;  //TODO() а можешь объяснить почему в lua Rx_Start/col_Step_1 так, а у меня в коде (rx2 - rx1)/col_Step_1;
+        this.delta_Ry_1 = (ry2 - ry1)/col_Step_1;
+        this.delta_Rz_1 = (rz2 - rz1)/col_Step_1;
 
-        double delta_Rx_2 = (rx3 - rx2)/col_Step_2;
-        double delta_Ry_2 = (ry3 - ry2)/col_Step_2;
-        double delta_Rz_2 = (rz3 - rz2)/col_Step_2;
+        this.delta_Rx_2 = (rx3 - rx2)/col_Step_2;
+        this.delta_Ry_2 = (ry3 - ry2)/col_Step_2;
+        this.delta_Rz_2 = (rz3 - rz2)/col_Step_2;
 
         if (is_Debug_Info_Active) {
             Log.d("TRAJ", "Параметры траектории:");
@@ -780,6 +867,69 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                 + z1 * Math.cos(coner_x);
 
         return new double[]{x, y, z};
+    }
+
+    private double[] coners(int nomer) {
+        double Rx, Ry, Rz;
+
+        if (nomer < col_Step_1) {
+            Rx = rx1 + delta_Rx_1 * nomer;
+            Ry = ry1 + delta_Ry_1 * nomer;
+            Rz = rz1 + delta_Rz_1 * nomer;
+        } else {
+            int offset = nomer - col_Step_1;
+            Rx = rx2 + delta_Rx_2 * offset;
+            Ry = ry2 + delta_Ry_2 * offset;
+            Rz = rz2 + delta_Rz_2 * offset;
+        }
+
+        return new double[]{Rx, Ry, Rz};
+    }
+
+    private List<double[]> generateArcPath() { //TODO() test_movemement
+        List<double[]> result = new ArrayList<>();
+
+        for (int count = 0; count <= CS; count++) {
+            double coner = start_coner_save + Rotate * count;
+            double[] xyz = coordinates(0, coner); // ← твоя реализация
+            double[] rxyz = coners(count);        // ← твоя реализация
+
+            double[] point = new double[6];
+            point[0] = xyz[0];
+            point[1] = xyz[1];
+            point[2] = xyz[2];
+            point[3] = rxyz[0];
+            point[4] = rxyz[1];
+            point[5] = rxyz[2];
+
+            result.add(point);
+        }
+
+        return result;
+    }
+
+//    private void power_Move(point_check) { //TODO()
+//
+//    }
+
+    private void line_movemement() {
+        //TODO() линейное движение
+    }
+
+    private void pila_movemement() {
+        //TODO() движение пилой
+    }
+
+    private void zig_zag_movemement() {
+        //TODO() движение зиг-заг
+    }
+
+    private void round_movemement(){
+        //TODO() движение по кругу
+    }
+
+    private void circles_movemement(){
+        //TODO() движение по окружности
     }
 
     // Реализация MainContract.View (можно оставить пустыми)
