@@ -35,6 +35,8 @@ import cc.dobot.crtcpdemo.message.base.BaseMessage;
 import cc.dobot.crtcpdemo.message.constant.CmdSet;
 import cc.dobot.crtcpdemo.message.constant.Robot;
 import cc.dobot.crtcpdemo.message.factory.MessageFactory;
+import cc.dobot.crtcpdemo.message.product.cr.CRMessageAccL;
+import cc.dobot.crtcpdemo.message.product.cr.CRMessageCP;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageClearError;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageDO;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageDOExecute;
@@ -48,6 +50,7 @@ import cc.dobot.crtcpdemo.message.product.cr.CRMessageMoveJog;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageResetRobot;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageSetArmOrientation;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageSpeedFactor;
+import cc.dobot.crtcpdemo.message.product.cr.CRMessageSpeedL;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageStartPath;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageStopScript;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageTextCommand;
@@ -372,12 +375,112 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
     }
 
     @Override
-    public void doTestRun(List<double[]> points) {
-        for (double[] p : points) {
-            doMovJ(p);  // либо doMovL, если нужен линейный путь
-            try { Thread.sleep(500); } catch (InterruptedException ignored) { }
-        }
+    public void doTestRun(final List<double[]> points, final long stepDelay) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (double[] p : points) {
+                    doMovL(p);
+                    try {
+                        Thread.sleep(stepDelay);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            }
+        }).start();
     }
+
+//    @Override
+//    public void startLineMovement(final List<double[]> pathPoints, final double speed) {
+//        // Включаем робота
+//        BaseMessage enableMsg = (BaseMessage) MessageFactory.getInstance().createMsg(CmdSet.ENABLE_ROBOT);
+//        view.refreshLogList(true, enableMsg.getMessageStringContent());
+//        APIMessageClient.getInstance().sendMsg(enableMsg, new MessageCallback() {
+//            @Override
+//            public void onMsgCallback(MsgState state, OriginalData msg) {
+//                if (state == MsgState.MSG_REPLY) {
+//                    view.refreshLogList(false, new String(msg.getTotalBytes()));
+//
+//                    CRMessageCP cpMsg = new CRMessageCP();
+//                    cpMsg.setR(100);  // Используем setR вместо setRatio
+//                    MoveMessageClient.getInstance().sendMsg(cpMsg, null);
+//
+//                    CRMessageSpeedL speedMsg = new CRMessageSpeedL();
+//                    speedMsg.setR((int) speed);  // Используем setR вместо setSpeedL
+//                    MoveMessageClient.getInstance().sendMsg(speedMsg, null);
+//
+//                    CRMessageAccL accMsg = new CRMessageAccL();
+//                    accMsg.setR(100);  // Используем setR вместо setAccL
+//                    MoveMessageClient.getInstance().sendMsg(accMsg, null);
+//
+//                    // Последовательные перемещения по точкам
+//                    new Thread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            for (double[] point : pathPoints) {
+//                                CRMessageMovL movL = (CRMessageMovL) MessageFactory.getInstance().createMsg(CmdSet.MOV_L);
+//                                movL.setPoint(point);
+//
+//                                view.refreshLogList(true, movL.getMessageStringContent());
+//                                MoveMessageClient.getInstance().sendMsg(movL, null);
+//
+//                                try {
+//                                    Thread.sleep(500); // Подождать, пока робот завершит движение
+//                                } catch (InterruptedException ignored) {}
+//                            }
+//                        }
+//                    }).start();
+//                }
+//            }
+//        });
+//    }
+//    @Override
+//    public void startLineMovement(final List<double[]> pathPoints, final double speed) {
+//        // Включаем робота
+//        BaseMessage enableMsg = (BaseMessage) MessageFactory.getInstance().createMsg(CmdSet.ENABLE_ROBOT);
+//        view.refreshLogList(true, enableMsg.getMessageStringContent());
+//
+//        APIMessageClient.getInstance().sendMsg(enableMsg, new MessageCallback() {
+//            @Override
+//            public void onMsgCallback(MsgState state, OriginalData msg) {
+//                if (state == MsgState.MSG_REPLY) {
+//                    view.refreshLogList(false, new String(msg.getTotalBytes()));
+//
+//                    // Установка параметров движения: CP, скорость и ускорение
+//                    CRMessageCP cpMsg = new CRMessageCP();
+//                    cpMsg.setR(100);  // установка параметра CP (коэффициент сглаживания)
+//                    MoveMessageClient.getInstance().sendMsg(cpMsg, null);
+//
+//                    CRMessageSpeedL speedMsg = new CRMessageSpeedL();
+//                    speedMsg.setR((int) speed);  // установка линейной скорости
+//                    MoveMessageClient.getInstance().sendMsg(speedMsg, null);
+//
+//                    CRMessageAccL accMsg = new CRMessageAccL();
+//                    accMsg.setR(100);  // установка ускорения
+//                    MoveMessageClient.getInstance().sendMsg(accMsg, null);
+//
+//                    // Запуск движения по точкам в отдельном потоке
+//                    new Thread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            for (double[] point : pathPoints) {
+//                                CRMessageMovL movL = (CRMessageMovL) MessageFactory.getInstance().createMsg(CmdSet.MOV_L);
+//                                movL.setPoint(point);
+//                                view.refreshLogList(true, movL.getMessageStringContent());
+//                                MoveMessageClient.getInstance().sendMsg(movL, null);
+//
+//                                try {
+//                                    Thread.sleep(500); // Подождать между перемещениями
+//                                } catch (InterruptedException ignored) {}
+//                            }
+//                        }
+//                    }).start();
+//                }
+//            }
+//        });
+//    }
+
 
     @Override
     public void doJointMovJ(final double[] point) {

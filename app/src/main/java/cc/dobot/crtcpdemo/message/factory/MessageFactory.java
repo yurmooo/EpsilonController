@@ -8,6 +8,7 @@ import cc.dobot.crtcpdemo.message.constant.CmdSet;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageAccJ;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageAccL;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageAuto;
+import cc.dobot.crtcpdemo.message.product.cr.CRMessageCP;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageClearError;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageDO;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageDOExecute;
@@ -28,6 +29,7 @@ import cc.dobot.crtcpdemo.message.product.cr.CRMessageResetRobot;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageRobotMode;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageSetArmOrientation;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageSpeedFactor;
+import cc.dobot.crtcpdemo.message.product.cr.CRMessageSpeedL;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageStartPath;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageStopScript;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageTool;
@@ -105,6 +107,10 @@ public class MessageFactory {
                 return new CRMessageAuto();
             case CmdSet.MANUAL:
                 return new CRMessageManual();
+            case CmdSet.CP:
+                return  new CRMessageCP();
+            case CmdSet.SPEED_L:
+                return new CRMessageSpeedL();
         }
         return null;
     }

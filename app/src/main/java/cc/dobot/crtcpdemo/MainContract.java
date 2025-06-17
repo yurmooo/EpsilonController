@@ -57,7 +57,8 @@ public interface MainContract {
 
         void doMovJ(double[] point);
         void doMovL(double[] point);
-        void doTestRun(List<double[]> points);
+        void doTestRun(List<double[]> points, long stepDelay);
+//        void startLineMovement(List<double[]> pathPoints, double speed);
 
         void doJointMovJ(double[] point);
         void setToolJogMove(int axisIndex, boolean isPositive);

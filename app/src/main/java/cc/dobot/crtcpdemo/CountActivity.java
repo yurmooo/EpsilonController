@@ -2,6 +2,7 @@ package cc.dobot.crtcpdemo;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -30,12 +31,13 @@ import java.util.Arrays;
 import cc.dobot.crtcpdemo.client.StateMessageClient;
 import cc.dobot.crtcpdemo.data.AlarmData;
 import cc.dobot.crtcpdemo.message.constant.Robot;
+import cc.dobot.crtcpdemo.message.product.cr.CRMessageAccL;
 
 public class CountActivity extends AppCompatActivity implements MainContract.View {
 
     private ImageButton drag_mode, btn_back;
     private Button get_pos_btn1, get_pos_btn2, get_pos_btn3, get_pos_btn4, get_pos_btn5, get_pos_btn6;
-    private Button save_btn;
+    private Button save_btn, goBtn;
     private TextView pos1, pos2, pos3, pos4, pos5, pos6;
     private Map<Integer, LinearLayout> taskViews = new HashMap<>();
     private LinearLayout dropdown_menu;
@@ -59,6 +61,10 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
     private double delta_Rx_2, delta_Ry_2, delta_Rz_2;
     private int CS;
     private double Rotate;
+    private List<double[]> arcPoints; // Список точек траектории
+    private int currentStep = 0;     // Текущий шаг
+    private long stepDelay = 500;    // Задержка между шагами (мс)
+    private Handler movementHandler;
     private LayoutInflater inflater;
     private TaskViewModel viewModel;
     private MainContract.Present present;
@@ -99,6 +105,7 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
 
         initView();
         initListeners();
+        movementHandler = new Handler();
         present = new MainPresent(this);
     }
 
@@ -122,6 +129,7 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
 
         dropdown_menu = findViewById(R.id.dropdown_menu);
 
+        goBtn = findViewById(R.id.go_btn);
         save_btn = findViewById(R.id.save_btn);
     }
 
@@ -137,6 +145,49 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                     Intent intent = new Intent(CountActivity.this, MainActivityEpsilon.class);
                     startActivity(intent);
                 }
+            }
+        });
+
+        goBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+//                List<double[]> pts = getJogPoints(); // твоя функция
+//                if (!pts.isEmpty()) {
+//                    present.startLineMovement(pts, 50);
+//                }
+                List<View> blocks = taskBlocksMap.get(currentTaskIndex);
+                double Step = -1;
+                int selectedBlockIndex = -1;
+
+                if (blocks != null) {
+                    for (int i = 0; i < blocks.size(); i++) {
+                        View block = blocks.get(i);
+                        CheckBox checkBox = block.findViewById(R.id.checkbox_select);
+                        if (checkBox != null && checkBox.isChecked()) {
+                            EditText stepField = block.findViewById(R.id.input_step);
+                            if (stepField != null) {
+                                try {
+                                    Step = Double.parseDouble(stepField.getText().toString());
+                                    selectedBlockIndex = i;
+                                    Log.d("GO_BTN", "Выбран блок #" + selectedBlockIndex + " со значением шага: " + Step);
+                                    break; // Берём первый активный
+                                } catch (NumberFormatException e) {
+                                    Log.e("GO_BTN", "Некорректное значение шага в блоке #" + i);
+                                    Toast.makeText(CountActivity.this, "Ошибка: неверный формат шага", Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (Step <= 0) {
+                    Toast.makeText(CountActivity.this, "Не найден активный блок с корректным шагом", Toast.LENGTH_SHORT).show();
+                    Log.w("GO_BTN", "Нет подходящего блока с установленным checkbox и корректным шагом");
+                    return;
+                }
+                trajectory_Parameters();
+                startStepMovement();
             }
         });
 
@@ -178,23 +229,23 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                 }
                 taskBlocksMap.get(idx).add(block);
 
-                Button btnAction = (Button) block.findViewById(R.id.btn_action);
+                Button btnAction = block.findViewById(R.id.btn_action);
                 btnAction.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
                         List<View> blocks = taskBlocksMap.get(currentTaskIndex);
                         int blockIndex = blocks.indexOf(block);
 
-                        // Получение данных из элементов
-                        CheckBox checkBox = (CheckBox) block.findViewById(R.id.checkbox_select);
-                        Spinner spinner = (Spinner) block.findViewById(R.id.spinner_type);
-                        EditText width = (EditText) block.findViewById(R.id.input_width);
-                        EditText height = (EditText) block.findViewById(R.id.input_height);
-                        EditText step = (EditText) block.findViewById(R.id.input_step);
-                        EditText speed = (EditText) block.findViewById(R.id.input_speed);
-                        Button actionBtn = (Button) block.findViewById(R.id.btn_action);
+                        // Получение данных
+                        CheckBox checkBox = block.findViewById(R.id.checkbox_select);
+                        Spinner spinner = block.findViewById(R.id.spinner_type);
+                        EditText width = block.findViewById(R.id.input_width);
+                        EditText height = block.findViewById(R.id.input_height);
+                        EditText step = block.findViewById(R.id.input_step);
+                        EditText speed = block.findViewById(R.id.input_speed);
+                        Button actionBtn = block.findViewById(R.id.btn_action);
 
-                        // Формирование текста лога
+                        // Вывод в лог
                         StringBuilder sb = new StringBuilder();
                         sb.append("Блок #").append(blockIndex).append("\n");
                         sb.append("  - Checked: ").append(checkBox.isChecked()).append("\n");
@@ -204,17 +255,69 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                         sb.append("  - Шаг: ").append(step.getText().toString()).append("\n");
                         sb.append("  - Скорость: ").append(speed.getText().toString()).append("\n");
                         sb.append("  - Кнопка: ").append(actionBtn.getText().toString());
-
                         Log.d("TASK_DATA", sb.toString());
 
-                        // Запуск тестового прохода по точкам
-                        List<double[]> arcPath = generateArcPath();
-                        if (arcPath.isEmpty()) {
-                            Toast.makeText(CountActivity.this, "Нет точек для теста", Toast.LENGTH_SHORT).show();
+                        // Чтение скорости
+                        long stepDelay = 50; // по умолчанию
+                        try {
+                            double s = Double.parseDouble(speed.getText().toString());
+                            if (s > 0) {
+                                stepDelay = (long) (1000 / s);
+                            }
+                        } catch (NumberFormatException e) {
+                            Log.e("SPEED", "Некорректная скорость", e);
+                            Toast.makeText(CountActivity.this, "Неверная скорость", Toast.LENGTH_SHORT).show();
                             return;
                         }
 
-                        present.doTestRun(arcPath);
+                        // Проверка координат
+                        if (!isValidPoint(x5, y5, z5, rx5, ry5, rz5)) {
+                            Toast.makeText(CountActivity.this, "ПОДХОД не задан", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        if (!isValidPoint(x4, y4, z4, rx4, ry4, rz4)) {
+                            Toast.makeText(CountActivity.this, "ОТХОД не задан", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        if (!isValidPoint(x6, y6, z6, rx6, ry6, rz6)) {
+                            Toast.makeText(CountActivity.this, "ДОМАШНЕЕ не задано", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        // Построение пути
+                        trajectory_Parameters();
+                        generateArcPath();
+
+                        if (arcPoints != null && !arcPoints.isEmpty()) {
+                            final long finalDelay = stepDelay;
+
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    moveTo(new double[]{x5, y5, z5, rx5, ry5, rz5}, finalDelay); // ПОДХОД
+
+                                    for (double[] pt : arcPoints) {
+                                        moveTo(pt, finalDelay); // ДВИЖЕНИЕ
+                                    }
+
+                                    moveTo(new double[]{x4, y4, z4, rx4, ry4, rz4}, finalDelay); // ОТХОД
+                                    moveTo(new double[]{x6, y6, z6, rx6, ry6, rz6}, finalDelay); // ДОМОЙ
+                                }
+                            }).start();
+                        } else {
+                            Toast.makeText(CountActivity.this, "Нет точек для движения", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    private void moveTo(double[] pt, long delay) {
+                        present.doMovL(pt);
+                        try {
+                            Thread.sleep(delay);
+                        } catch (InterruptedException ignored) {}
+                    }
+
+                    private boolean isValidPoint(double x, double y, double z, double rx, double ry, double rz) {
+                        return !(x == 0.0 && y == 0.0 && z == 0.0 && rx == 0.0 && ry == 0.0 && rz == 0.0);
                     }
                 });
 
@@ -222,6 +325,107 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                 viewModel.addElementType(currentTaskIndex, R.layout.task_element);
             }
         });
+
+//        findViewById(R.id.add_block_btn).setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                LayoutInflater inflater = LayoutInflater.from(CountActivity.this);
+//                final View block = inflater.inflate(R.layout.task_element, null);
+//                Spinner spinner = block.findViewById(R.id.spinner_type);
+//
+//                String[] types = new String[]{"Линейно", "Пила", "Зиг-Заг", "По кругу", "По окружности"};
+//                ArrayAdapter<String> adapter = new ArrayAdapter<>(
+//                        CountActivity.this,
+//                        android.R.layout.simple_spinner_item,
+//                        types
+//                );
+//                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+//                spinner.setAdapter(adapter);
+//
+//                int idx = currentTaskIndex;
+//                if (!taskBlocksMap.containsKey(idx)) {
+//                    taskBlocksMap.put(idx, new ArrayList<View>());
+//                }
+//                taskBlocksMap.get(idx).add(block);
+//
+//                Button btnAction = (Button) block.findViewById(R.id.btn_action);
+//                btnAction.setOnClickListener(new View.OnClickListener() {
+//                    @Override
+//                    public void onClick(View view) {
+//                        List<View> blocks = taskBlocksMap.get(currentTaskIndex);
+//                        int blockIndex = blocks.indexOf(block);
+//
+//                        // Получение данных из элементов
+//                        CheckBox checkBox = (CheckBox) block.findViewById(R.id.checkbox_select);
+//                        Spinner spinner = (Spinner) block.findViewById(R.id.spinner_type);
+//                        EditText width = (EditText) block.findViewById(R.id.input_width);
+//                        EditText height = (EditText) block.findViewById(R.id.input_height);
+//                        EditText step = (EditText) block.findViewById(R.id.input_step);
+//                        EditText speed = (EditText) block.findViewById(R.id.input_speed);
+//                        Button actionBtn = (Button) block.findViewById(R.id.btn_action);
+//
+//                        // Формирование текста лога
+//                        StringBuilder sb = new StringBuilder();
+//                        sb.append("Блок #").append(blockIndex).append("\n");
+//                        sb.append("  - Checked: ").append(checkBox.isChecked()).append("\n");
+//                        sb.append("  - Тип: ").append(spinner.getSelectedItem()).append("\n");
+//                        sb.append("  - Ширина: ").append(width.getText().toString()).append("\n");
+//                        sb.append("  - Высота: ").append(height.getText().toString()).append("\n");
+//                        sb.append("  - Шаг: ").append(step.getText().toString()).append("\n");
+//                        sb.append("  - Скорость: ").append(speed.getText().toString()).append("\n");
+//                        sb.append("  - Кнопка: ").append(actionBtn.getText().toString());
+//
+//                        Log.d("TASK_DATA", sb.toString());
+//
+//                        // Получаем скорость из поля ввода
+//                        long stepDelay = 50; // Значение по умолчанию (мс)
+//                        try {
+//                            stepDelay = (long) (1000 / Double.parseDouble(speed.getText().toString()));
+//                        } catch (NumberFormatException e) {
+//                            Log.e("SPEED", "Некорректное значение скорости", e);
+//                        }
+//
+//                        trajectory_Parameters();
+//                        generateArcPath();
+//
+//                        if (arcPoints != null && !arcPoints.isEmpty()) {
+//                            new Thread(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    // 1. Подход (точка 5)
+//                                    present.doMovL(new double[]{x5, y5, z5, rx5, ry5, rz5});
+//                                    sleep(stepDelay);
+//
+//                                    // 2. Основной тестовый проход
+//                                    for (double[] point : arcPoints) {
+//                                        present.doMovL(point);
+//                                        sleep(stepDelay);
+//                                    }
+//
+//                                    // 3. Отход (точка 4)
+//                                    present.doMovL(new double[]{x4, y4, z4, rx4, ry4, rz4});
+//                                    sleep(stepDelay);
+//
+//                                    // 4. Домашнее положение (точка 6)
+//                                    present.doMovL(new double[]{x6, y6, z6, rx6, ry6, rz6});
+//                                }
+//
+//                                private void sleep(long ms) {
+//                                    try {
+//                                        Thread.sleep(ms);
+//                                    } catch (InterruptedException ignored) {}
+//                                }
+//                            }).start();
+//                        } else {
+//                            Toast.makeText(CountActivity.this, "Нет точек для движения", Toast.LENGTH_SHORT).show();
+//                        }
+//                    }
+//                });
+//
+//                taskViews.get(currentTaskIndex).addView(block);
+//                viewModel.addElementType(currentTaskIndex, R.layout.task_element);
+//            }
+//        });
 
         get_pos_btn1.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -341,7 +545,7 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
             @Override
             public void onClick(View view) {
                 toggleDropdownMenu();
-                calculations(); // Вызываем расчеты
+                calculations();// Вызываем расчеты
                 Toast.makeText(CountActivity.this, "Значения сохранены", Toast.LENGTH_SHORT).show();  // Исправлен контекст
             }
         });
@@ -470,9 +674,12 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
 
     private void calculations() {
         // Получаем координаты из полей класса
-        double[] start = {x1, y1, z1};
-        double[] mid = {x2, y2, z2};
-        double[] end = {x3, y3, z3};
+//        double[] start = {x1, y1, z1};
+//        double[] mid = {x2, y2, z2};
+//        double[] end = {x3, y3, z3};
+        double[] start = {x1 = 10.0, y1 = 0.0, z1 = 0.0};
+        double[] mid = {x2 = 0.0, y2 = 10.0, z2 = 0.0};
+        double[] end = {x3 = 0.0, y3 = 0.0, z3 = 10.0};
 
         boolean is_Debug_Info_Active = true;
 
@@ -497,7 +704,7 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
         double s = (a + b + c) / 2;
         double R = a * b * c / (4 * Math.sqrt(s * (s - a) * (s - b) * (s - c)));
         double Radius = R;
-        Log.d("CALC", "Диаметр окружности дуги: " + String.format("%.0f", R * 2) + " мм");
+        Log.d("CALC", "Диаметр окружности дуги: " + String.format("%.2f", R * 2) + " мм");
 
         // Вычисляем центр окружности
         double b1 = a * a * (b * b + c * c - a * a);
@@ -788,8 +995,30 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
     }
 
     private void trajectory_Parameters() {
+        Log.d("TRAJ", "Метод trajectory_Parameters() вызван");
         boolean is_Debug_Info_Active = true; // Флаг для отладки
-        double Step = 5.0; // Шаг в мм (можете изменить на нужное значение или передавать как параметр) TODO() сделать чтобы шаг брался из поля в activity_count
+
+        double speed = 50; // Значение по умолчанию
+        List<View> blocks = taskBlocksMap.get(currentTaskIndex);
+        if (blocks != null) {
+            for (View block : blocks) {
+                CheckBox checkBox = block.findViewById(R.id.checkbox_select);
+                if (checkBox != null && checkBox.isChecked()) {
+                    EditText speedField = block.findViewById(R.id.input_speed);
+                    if (speedField != null) {
+                        try {
+                            speed = Double.parseDouble(speedField.getText().toString());
+                        } catch (NumberFormatException e) {
+                            Log.e("TRAJ", "Ошибка парсинга скорости", e);
+                        }
+                    }
+                }
+            }
+        }
+        this.stepDelay = (long) (1000 / speed);
+
+        // Поиск активного блока с чекбоксом
+        double Step = 5;
 
         // Вычисляем общие параметры траектории
         double Ugol = end_coner_save - start_coner_save;
@@ -798,6 +1027,7 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
         double col_Step = (dlina_Dugi/Step);
         Log.d("TRAJ", "Длина шва: " + String.format("%.1f", dlina_Dugi) + " мм");
         this.CS = (int) Math.floor(col_Step);
+        Log.d("TRAJ", "Кол-во шагов: " + String.format("%d", CS));
         this.Rotate = (Ugol/CS);
 
         // Вычисляем параметры для первой части траектории (START-MID)
@@ -886,34 +1116,53 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
         return new double[]{Rx, Ry, Rz};
     }
 
-    private List<double[]> generateArcPath() { //TODO() test_movemement
-        List<double[]> result = new ArrayList<>();
-
+    private void generateArcPath() {
+        arcPoints = new ArrayList<>();
         for (int count = 0; count <= CS; count++) {
             double coner = start_coner_save + Rotate * count;
-            double[] xyz = coordinates(0, coner); // ← твоя реализация
-            double[] rxyz = coners(count);        // ← твоя реализация
-
-            double[] point = new double[6];
-            point[0] = xyz[0];
-            point[1] = xyz[1];
-            point[2] = xyz[2];
-            point[3] = rxyz[0];
-            point[4] = rxyz[1];
-            point[5] = rxyz[2];
-
-            result.add(point);
+            double[] xyz = coordinates(0, coner);
+            double[] rxyz = coners(count);
+            arcPoints.add(new double[]{
+                    xyz[0], xyz[1], xyz[2],
+                    rxyz[0], rxyz[1], rxyz[2]
+            });
         }
-
-        return result;
     }
+
+    private void startStepMovement() {
+        if (arcPoints == null || arcPoints.isEmpty()) {
+            generateArcPath();
+        }
+        currentStep = 0;
+        movementHandler.post(stepMovementRunnable);
+    }
+
+    // Остановка движения
+    private void stopStepMovement() {
+        movementHandler.removeCallbacks(stepMovementRunnable);
+    }
+
+    private Runnable stepMovementRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (currentStep < arcPoints.size()) {
+                present.doMovL(arcPoints.get(currentStep));
+                currentStep++;
+                movementHandler.postDelayed(this, stepDelay); // Повтор с задержкой
+            } else {
+                Toast.makeText(CountActivity.this, "Движение завершено", Toast.LENGTH_SHORT).show();
+            }
+        }
+    };
+
+
 
 //    private void power_Move(point_check) { //TODO()
 //
 //    }
 
     private void line_movemement() {
-        //TODO() линейное движение
+
     }
 
     private void pila_movemement() {

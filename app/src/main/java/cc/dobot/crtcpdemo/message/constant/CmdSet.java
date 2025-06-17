@@ -27,4 +27,6 @@ public interface CmdSet {
     String GET_PATH_START_POSE = "GetPathStartPose";
     String AUTO="Auto";
     String MANUAL="Manual";
+    String CP="CP";
+    String SPEED_L = "SPEEDL";
 }
