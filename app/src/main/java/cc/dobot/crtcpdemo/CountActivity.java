@@ -37,7 +37,7 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
 
     private ImageButton drag_mode, btn_back;
     private Button get_pos_btn1, get_pos_btn2, get_pos_btn3, get_pos_btn4, get_pos_btn5, get_pos_btn6;
-    private Button save_btn, goBtn;
+    private Button save_btn, goBtn, stopBtn;
     private TextView pos1, pos2, pos3, pos4, pos5, pos6;
     private Map<Integer, LinearLayout> taskViews = new HashMap<>();
     private LinearLayout dropdown_menu;
@@ -129,6 +129,7 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
 
         dropdown_menu = findViewById(R.id.dropdown_menu);
 
+        stopBtn = findViewById(R.id.stop_btn);
         goBtn = findViewById(R.id.go_btn);
         save_btn = findViewById(R.id.save_btn);
     }
@@ -188,6 +189,15 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                 }
                 trajectory_Parameters();
                 startStepMovement();
+            }
+        });
+
+        stopBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                stopStepMovement(); // Останавливаем движение
+                Toast.makeText(CountActivity.this, "Движение остановлено", Toast.LENGTH_SHORT).show();
+                Log.d("Movement", "Движение остановлено по команде пользователя");
             }
         });
 
@@ -674,12 +684,12 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
 
     private void calculations() {
         // Получаем координаты из полей класса
-//        double[] start = {x1, y1, z1};
-//        double[] mid = {x2, y2, z2};
-//        double[] end = {x3, y3, z3};
-        double[] start = {x1 = 10.0, y1 = 0.0, z1 = 0.0};
-        double[] mid = {x2 = 0.0, y2 = 10.0, z2 = 0.0};
-        double[] end = {x3 = 0.0, y3 = 0.0, z3 = 10.0};
+        double[] start = {x1, y1, z1};
+        double[] mid = {x2, y2, z2};
+        double[] end = {x3, y3, z3};
+//        double[] start = {x1 = 10.0, y1 = 0.0, z1 = 0.0};
+//        double[] mid = {x2 = 0.0, y2 = 10.0, z2 = 0.0};
+//        double[] end = {x3 = 0.0, y3 = 0.0, z3 = 10.0};
 
         boolean is_Debug_Info_Active = true;
 
@@ -1154,8 +1164,6 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
             }
         }
     };
-
-
 
 //    private void power_Move(point_check) { //TODO()
 //

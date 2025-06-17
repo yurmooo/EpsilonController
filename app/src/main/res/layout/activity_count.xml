@@ -260,13 +260,27 @@
                 android:layout_weight="1"/>
         </ScrollView>
 
-        <Button
-            android:id="@+id/go_btn"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Запуск"
+            android:orientation="horizontal"
             app:layout_constraintTop_toBottomOf="@id/main_container"
-            app:layout_constraintBottom_toTopOf="@id/task_container"/>
+            app:layout_constraintBottom_toTopOf="@id/task_container">
+
+            <Button
+                android:id="@+id/go_btn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Старт"/>
+
+            <Button
+                android:id="@+id/stop_btn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Стоп"/>
+        </LinearLayout>
 
         <!-- Кнопка добавления нового элемента -->
         <Button
