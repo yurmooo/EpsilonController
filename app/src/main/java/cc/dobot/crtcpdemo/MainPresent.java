@@ -2,6 +2,7 @@ package cc.dobot.crtcpdemo;
 
 import android.os.FileUtils;
 import android.os.Handler;
+import android.util.Log;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -53,6 +54,7 @@ import cc.dobot.crtcpdemo.message.product.cr.CRMessageSpeedFactor;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageSpeedL;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageStartPath;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageStopScript;
+import cc.dobot.crtcpdemo.message.product.cr.CRMessageSync;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageTextCommand;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageTool;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageUser;
@@ -359,6 +361,18 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
         message = (BaseMessage) MessageFactory.getInstance().createMsg(CmdSet.ENABLE_ROBOT);
         view.refreshLogList(true,message.getMessageStringContent());
 
+//        // 1. Проверка входных параметров
+//        if (point == null || point.length < 6) {
+//            Log.e("Movement", "Некорректные координаты точки");
+//            view.refreshLogList(false, "Ошибка: некорректные координаты точки");
+//            return;
+//        }
+//
+//        // 2. Логирование перед началом движения
+//        view.refreshLogList(true, "Инициируем перемещение в точку: "
+//                + String.format("X=%.2f, Y=%.2f, Z=%.2f, Rx=%.2f, Ry=%.2f, Rz=%.2f",
+//                point[0], point[1], point[2], point[3], point[4], point[5]));
+
         APIMessageClient.getInstance().sendMsg(message, new MessageCallback() {
             @Override
             public void onMsgCallback(MsgState state, OriginalData msg) {
@@ -391,96 +405,24 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
         }).start();
     }
 
-//    @Override
-//    public void startLineMovement(final List<double[]> pathPoints, final double speed) {
-//        // Включаем робота
-//        BaseMessage enableMsg = (BaseMessage) MessageFactory.getInstance().createMsg(CmdSet.ENABLE_ROBOT);
-//        view.refreshLogList(true, enableMsg.getMessageStringContent());
-//        APIMessageClient.getInstance().sendMsg(enableMsg, new MessageCallback() {
-//            @Override
-//            public void onMsgCallback(MsgState state, OriginalData msg) {
-//                if (state == MsgState.MSG_REPLY) {
-//                    view.refreshLogList(false, new String(msg.getTotalBytes()));
-//
-//                    CRMessageCP cpMsg = new CRMessageCP();
-//                    cpMsg.setR(100);  // Используем setR вместо setRatio
-//                    MoveMessageClient.getInstance().sendMsg(cpMsg, null);
-//
-//                    CRMessageSpeedL speedMsg = new CRMessageSpeedL();
-//                    speedMsg.setR((int) speed);  // Используем setR вместо setSpeedL
-//                    MoveMessageClient.getInstance().sendMsg(speedMsg, null);
-//
-//                    CRMessageAccL accMsg = new CRMessageAccL();
-//                    accMsg.setR(100);  // Используем setR вместо setAccL
-//                    MoveMessageClient.getInstance().sendMsg(accMsg, null);
-//
-//                    // Последовательные перемещения по точкам
-//                    new Thread(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            for (double[] point : pathPoints) {
-//                                CRMessageMovL movL = (CRMessageMovL) MessageFactory.getInstance().createMsg(CmdSet.MOV_L);
-//                                movL.setPoint(point);
-//
-//                                view.refreshLogList(true, movL.getMessageStringContent());
-//                                MoveMessageClient.getInstance().sendMsg(movL, null);
-//
-//                                try {
-//                                    Thread.sleep(500); // Подождать, пока робот завершит движение
-//                                } catch (InterruptedException ignored) {}
-//                            }
-//                        }
-//                    }).start();
-//                }
-//            }
-//        });
-//    }
-//    @Override
-//    public void startLineMovement(final List<double[]> pathPoints, final double speed) {
-//        // Включаем робота
-//        BaseMessage enableMsg = (BaseMessage) MessageFactory.getInstance().createMsg(CmdSet.ENABLE_ROBOT);
-//        view.refreshLogList(true, enableMsg.getMessageStringContent());
-//
-//        APIMessageClient.getInstance().sendMsg(enableMsg, new MessageCallback() {
-//            @Override
-//            public void onMsgCallback(MsgState state, OriginalData msg) {
-//                if (state == MsgState.MSG_REPLY) {
-//                    view.refreshLogList(false, new String(msg.getTotalBytes()));
-//
-//                    // Установка параметров движения: CP, скорость и ускорение
-//                    CRMessageCP cpMsg = new CRMessageCP();
-//                    cpMsg.setR(100);  // установка параметра CP (коэффициент сглаживания)
-//                    MoveMessageClient.getInstance().sendMsg(cpMsg, null);
-//
-//                    CRMessageSpeedL speedMsg = new CRMessageSpeedL();
-//                    speedMsg.setR((int) speed);  // установка линейной скорости
-//                    MoveMessageClient.getInstance().sendMsg(speedMsg, null);
-//
-//                    CRMessageAccL accMsg = new CRMessageAccL();
-//                    accMsg.setR(100);  // установка ускорения
-//                    MoveMessageClient.getInstance().sendMsg(accMsg, null);
-//
-//                    // Запуск движения по точкам в отдельном потоке
-//                    new Thread(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            for (double[] point : pathPoints) {
-//                                CRMessageMovL movL = (CRMessageMovL) MessageFactory.getInstance().createMsg(CmdSet.MOV_L);
-//                                movL.setPoint(point);
-//                                view.refreshLogList(true, movL.getMessageStringContent());
-//                                MoveMessageClient.getInstance().sendMsg(movL, null);
-//
-//                                try {
-//                                    Thread.sleep(500); // Подождать между перемещениями
-//                                } catch (InterruptedException ignored) {}
-//                            }
-//                        }
-//                    }).start();
-//                }
-//            }
-//        });
-//    }
+    @Override
+    public void syncRobot() {
+        // Создаем сообщение для синхронизации
+        final CRMessageSync syncMessage = (CRMessageSync) MessageFactory.getInstance().createMsg(CmdSet.SYNC);
+        view.refreshLogList(true, syncMessage.getMessageStringContent());
 
+        // Отправляем сообщение синхронизации
+        APIMessageClient.getInstance().sendMsg(syncMessage, new MessageCallback() {
+            @Override
+            public void onMsgCallback(MsgState state, OriginalData msg) {
+                if (msg != null && state == MsgState.MSG_REPLY) {
+                    // Обрабатываем ответ от робота
+                    syncMessage.transformReceiveData2Object(msg);
+                    view.refreshLogList(false, syncMessage.getMessageStringContent());
+                } else {}
+            }
+        });
+    }
 
     @Override
     public void doJointMovJ(final double[] point) {

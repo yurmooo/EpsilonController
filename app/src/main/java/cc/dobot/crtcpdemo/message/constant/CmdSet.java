@@ -29,4 +29,5 @@ public interface CmdSet {
     String MANUAL="Manual";
     String CP="CP";
     String SPEED_L = "SPEEDL";
+    String SYNC = "SYNC";
 }

@@ -37,7 +37,7 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
 
     private ImageButton drag_mode, btn_back;
     private Button get_pos_btn1, get_pos_btn2, get_pos_btn3, get_pos_btn4, get_pos_btn5, get_pos_btn6;
-    private Button save_btn, goBtn, stopBtn;
+    private Button save_btn, goBtn, stopBtn, houseBtn, otBtn, podBtn, threeBtn;
     private TextView pos1, pos2, pos3, pos4, pos5, pos6;
     private Map<Integer, LinearLayout> taskViews = new HashMap<>();
     private LinearLayout dropdown_menu;
@@ -129,12 +129,75 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
 
         dropdown_menu = findViewById(R.id.dropdown_menu);
 
+        threeBtn = findViewById(R.id.three);
+        otBtn = findViewById(R.id.otxod);
+        podBtn = findViewById(R.id.podxod);
+        houseBtn = findViewById(R.id.house);
         stopBtn = findViewById(R.id.stop_btn);
         goBtn = findViewById(R.id.go_btn);
         save_btn = findViewById(R.id.save_btn);
     }
 
     private void initListeners() {
+        threeBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            // 1. Домой
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    moveToHomePosition();
+                                    present.setSpeedRatio(30);
+                                    Toast.makeText(CountActivity.this, "Перемещение в домашнюю позицию", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                            Thread.sleep(3000); // Задержка 1 сек
+
+                            // 2. Подход
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    moveToApproachPosition();
+                                    present.setSpeedRatio(30);
+                                    Toast.makeText(CountActivity.this, "Перемещение в точку отхода", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                            Thread.sleep(3000); // Задержка 1 сек
+
+                            // 3. Отход
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    moveToRetreatPosition();
+                                    present.setSpeedRatio(30);
+                                    Toast.makeText(CountActivity.this, "Перемещение в точку подхода", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                            Thread.sleep(3000); // Задержка 1 сек
+
+                            // 4. Домой
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    moveToHomePosition();
+                                    present.setSpeedRatio(30);
+                                    Toast.makeText(CountActivity.this, "Перемещение в домашнюю позицию", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                            Thread.sleep(3000); // Задержка 1 сек
+
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }).start();
+            }
+        });
+
         btn_back.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -152,10 +215,6 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
         goBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                List<double[]> pts = getJogPoints(); // твоя функция
-//                if (!pts.isEmpty()) {
-//                    present.startLineMovement(pts, 50);
-//                }
                 List<View> blocks = taskBlocksMap.get(currentTaskIndex);
                 double Step = -1;
                 int selectedBlockIndex = -1;
@@ -187,8 +246,10 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                     Log.w("GO_BTN", "Нет подходящего блока с установленным checkbox и корректным шагом");
                     return;
                 }
+                calculations();
                 trajectory_Parameters();
-                startStepMovement();
+
+                executeTrajectory();
             }
         });
 
@@ -252,7 +313,9 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                         EditText width = block.findViewById(R.id.input_width);
                         EditText height = block.findViewById(R.id.input_height);
                         EditText step = block.findViewById(R.id.input_step);
+                        step.setText("5");
                         EditText speed = block.findViewById(R.id.input_speed);
+                        speed.setText("50");
                         Button actionBtn = block.findViewById(R.id.btn_action);
 
                         // Вывод в лог
@@ -279,163 +342,15 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                             Toast.makeText(CountActivity.this, "Неверная скорость", Toast.LENGTH_SHORT).show();
                             return;
                         }
-
-                        // Проверка координат
-                        if (!isValidPoint(x5, y5, z5, rx5, ry5, rz5)) {
-                            Toast.makeText(CountActivity.this, "ПОДХОД не задан", Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-                        if (!isValidPoint(x4, y4, z4, rx4, ry4, rz4)) {
-                            Toast.makeText(CountActivity.this, "ОТХОД не задан", Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-                        if (!isValidPoint(x6, y6, z6, rx6, ry6, rz6)) {
-                            Toast.makeText(CountActivity.this, "ДОМАШНЕЕ не задано", Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-
-                        // Построение пути
+                        calculations();
                         trajectory_Parameters();
-                        generateArcPath();
-
-                        if (arcPoints != null && !arcPoints.isEmpty()) {
-                            final long finalDelay = stepDelay;
-
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    moveTo(new double[]{x5, y5, z5, rx5, ry5, rz5}, finalDelay); // ПОДХОД
-
-                                    for (double[] pt : arcPoints) {
-                                        moveTo(pt, finalDelay); // ДВИЖЕНИЕ
-                                    }
-
-                                    moveTo(new double[]{x4, y4, z4, rx4, ry4, rz4}, finalDelay); // ОТХОД
-                                    moveTo(new double[]{x6, y6, z6, rx6, ry6, rz6}, finalDelay); // ДОМОЙ
-                                }
-                            }).start();
-                        } else {
-                            Toast.makeText(CountActivity.this, "Нет точек для движения", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-
-                    private void moveTo(double[] pt, long delay) {
-                        present.doMovL(pt);
-                        try {
-                            Thread.sleep(delay);
-                        } catch (InterruptedException ignored) {}
-                    }
-
-                    private boolean isValidPoint(double x, double y, double z, double rx, double ry, double rz) {
-                        return !(x == 0.0 && y == 0.0 && z == 0.0 && rx == 0.0 && ry == 0.0 && rz == 0.0);
+                        executeTrajectory();
                     }
                 });
-
                 taskViews.get(currentTaskIndex).addView(block);
                 viewModel.addElementType(currentTaskIndex, R.layout.task_element);
             }
         });
-
-//        findViewById(R.id.add_block_btn).setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                LayoutInflater inflater = LayoutInflater.from(CountActivity.this);
-//                final View block = inflater.inflate(R.layout.task_element, null);
-//                Spinner spinner = block.findViewById(R.id.spinner_type);
-//
-//                String[] types = new String[]{"Линейно", "Пила", "Зиг-Заг", "По кругу", "По окружности"};
-//                ArrayAdapter<String> adapter = new ArrayAdapter<>(
-//                        CountActivity.this,
-//                        android.R.layout.simple_spinner_item,
-//                        types
-//                );
-//                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-//                spinner.setAdapter(adapter);
-//
-//                int idx = currentTaskIndex;
-//                if (!taskBlocksMap.containsKey(idx)) {
-//                    taskBlocksMap.put(idx, new ArrayList<View>());
-//                }
-//                taskBlocksMap.get(idx).add(block);
-//
-//                Button btnAction = (Button) block.findViewById(R.id.btn_action);
-//                btnAction.setOnClickListener(new View.OnClickListener() {
-//                    @Override
-//                    public void onClick(View view) {
-//                        List<View> blocks = taskBlocksMap.get(currentTaskIndex);
-//                        int blockIndex = blocks.indexOf(block);
-//
-//                        // Получение данных из элементов
-//                        CheckBox checkBox = (CheckBox) block.findViewById(R.id.checkbox_select);
-//                        Spinner spinner = (Spinner) block.findViewById(R.id.spinner_type);
-//                        EditText width = (EditText) block.findViewById(R.id.input_width);
-//                        EditText height = (EditText) block.findViewById(R.id.input_height);
-//                        EditText step = (EditText) block.findViewById(R.id.input_step);
-//                        EditText speed = (EditText) block.findViewById(R.id.input_speed);
-//                        Button actionBtn = (Button) block.findViewById(R.id.btn_action);
-//
-//                        // Формирование текста лога
-//                        StringBuilder sb = new StringBuilder();
-//                        sb.append("Блок #").append(blockIndex).append("\n");
-//                        sb.append("  - Checked: ").append(checkBox.isChecked()).append("\n");
-//                        sb.append("  - Тип: ").append(spinner.getSelectedItem()).append("\n");
-//                        sb.append("  - Ширина: ").append(width.getText().toString()).append("\n");
-//                        sb.append("  - Высота: ").append(height.getText().toString()).append("\n");
-//                        sb.append("  - Шаг: ").append(step.getText().toString()).append("\n");
-//                        sb.append("  - Скорость: ").append(speed.getText().toString()).append("\n");
-//                        sb.append("  - Кнопка: ").append(actionBtn.getText().toString());
-//
-//                        Log.d("TASK_DATA", sb.toString());
-//
-//                        // Получаем скорость из поля ввода
-//                        long stepDelay = 50; // Значение по умолчанию (мс)
-//                        try {
-//                            stepDelay = (long) (1000 / Double.parseDouble(speed.getText().toString()));
-//                        } catch (NumberFormatException e) {
-//                            Log.e("SPEED", "Некорректное значение скорости", e);
-//                        }
-//
-//                        trajectory_Parameters();
-//                        generateArcPath();
-//
-//                        if (arcPoints != null && !arcPoints.isEmpty()) {
-//                            new Thread(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    // 1. Подход (точка 5)
-//                                    present.doMovL(new double[]{x5, y5, z5, rx5, ry5, rz5});
-//                                    sleep(stepDelay);
-//
-//                                    // 2. Основной тестовый проход
-//                                    for (double[] point : arcPoints) {
-//                                        present.doMovL(point);
-//                                        sleep(stepDelay);
-//                                    }
-//
-//                                    // 3. Отход (точка 4)
-//                                    present.doMovL(new double[]{x4, y4, z4, rx4, ry4, rz4});
-//                                    sleep(stepDelay);
-//
-//                                    // 4. Домашнее положение (точка 6)
-//                                    present.doMovL(new double[]{x6, y6, z6, rx6, ry6, rz6});
-//                                }
-//
-//                                private void sleep(long ms) {
-//                                    try {
-//                                        Thread.sleep(ms);
-//                                    } catch (InterruptedException ignored) {}
-//                                }
-//                            }).start();
-//                        } else {
-//                            Toast.makeText(CountActivity.this, "Нет точек для движения", Toast.LENGTH_SHORT).show();
-//                        }
-//                    }
-//                });
-//
-//                taskViews.get(currentTaskIndex).addView(block);
-//                viewModel.addElementType(currentTaskIndex, R.layout.task_element);
-//            }
-//        });
 
         get_pos_btn1.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -551,6 +466,27 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
             }
         });
 
+        otBtn.setOnClickListener(new View.OnClickListener() {
+           @Override
+           public void onClick(View v) {
+               moveToRetreatPosition();
+           }
+        });
+
+        podBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                moveToApproachPosition();
+            }
+        });
+
+        houseBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                moveToHomePosition();
+            }
+        });
+
         save_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -561,37 +497,148 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
         });
     }
 
-    private List<double[]> getJogPoints() {
-        List<double[]> pts = new ArrayList<>();
-        TextView[] posViews = new TextView[]{pos1, pos2, pos3};
-
-        for (TextView tv : posViews) {
-            String text = tv.getText().toString().trim();
-            if (!text.startsWith("X=")) continue;
-
-            try {
-                // Пример строки:
-                // X=0, Y=0, Z=0\nRx=0, Ry=0, Rz=0
-                String[] lines = text.split("\n");
-                String[] xyz = lines[0].replace("X=", "").replace("Y=", "").replace("Z=", "").split(", ");
-                String[] rxyz = lines[1].replace("Rx=", "").replace("Ry=", "").replace("Rz=", "").split(", ");
-
-                double[] point = new double[6];
-                point[0] = Double.parseDouble(xyz[0]);
-                point[1] = Double.parseDouble(xyz[1]);
-                point[2] = Double.parseDouble(xyz[2]);
-                point[3] = Double.parseDouble(rxyz[0]);
-                point[4] = Double.parseDouble(rxyz[1]);
-                point[5] = Double.parseDouble(rxyz[2]);
-
-                pts.add(point);
-            } catch (Exception e) {
-                Log.e("getJogPoints", "Ошибка парсинга координат: " + e.getMessage());
-            }
+    //Домой
+    private void moveToHomePosition() {
+        // Проверяем, что координаты были сохранены
+        if (x6 == 0 && y6 == 0 && z6 == 0) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(CountActivity.this, "Домашняя позиция не задана", Toast.LENGTH_SHORT).show();
+                }
+            });
+            return;
         }
 
-        return pts;
+        // Создаем массив с координатами
+        double[] homePosition = new double[]{
+                x6, y6, z6,  // X, Y, Z
+                rx6, ry6, rz6  // Rx, Ry, Rz
+        };
+
+        // Отправляем команду на перемещение
+        if (present != null) {
+            present.doMovL(homePosition);
+            present.syncRobot();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(CountActivity.this, "Перемещение в домашнюю позицию", Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(CountActivity.this, "Ошибка: Presenter не инициализирован", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
     }
+
+    //ПОДХОД
+    private void moveToApproachPosition() {
+        if (x5 == 0 && y5 == 0 && z5 == 0) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(CountActivity.this, "Точка подхода не задана", Toast.LENGTH_SHORT).show();
+                }
+            });
+            return;
+        }
+
+        double[] approachPosition = new double[]{
+                x5, y5, z5,
+                rx5, ry5, rz5
+        };
+
+        if (present != null) {
+            present.doMovL(approachPosition);
+            present.syncRobot();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(CountActivity.this, "Перемещение в точку подхода", Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(CountActivity.this, "Ошибка: Presenter не инициализирован", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
+
+    //ОТХОД
+    private void moveToRetreatPosition() {
+        if (x4 == 0 && y4 == 0 && z4 == 0) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(CountActivity.this, "Точка отхода не задана", Toast.LENGTH_SHORT).show();
+                }
+            });
+            return;
+        }
+
+        double[] retreatPosition = new double[]{
+                x4, y4, z4,
+                rx4, ry4, rz4
+        };
+
+        if (present != null) {
+            present.doMovL(retreatPosition);
+            present.syncRobot();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(CountActivity.this, "Перемещение в отхода подхода", Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(CountActivity.this, "Ошибка: Presenter не инициализирован", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
+
+//    private List<double[]> getJogPoints() {
+//        List<double[]> pts = new ArrayList<>();
+//        TextView[] posViews = new TextView[]{pos1, pos2, pos3};
+//
+//        for (TextView tv : posViews) {
+//            String text = tv.getText().toString().trim();
+//            if (!text.startsWith("X=")) continue;
+//
+//            try {
+//                // Пример строки:
+//                // X=0, Y=0, Z=0\nRx=0, Ry=0, Rz=0
+//                String[] lines = text.split("\n");
+//                String[] xyz = lines[0].replace("X=", "").replace("Y=", "").replace("Z=", "").split(", ");
+//                String[] rxyz = lines[1].replace("Rx=", "").replace("Ry=", "").replace("Rz=", "").split(", ");
+//
+//                double[] point = new double[6];
+//                point[0] = Double.parseDouble(xyz[0]);
+//                point[1] = Double.parseDouble(xyz[1]);
+//                point[2] = Double.parseDouble(xyz[2]);
+//                point[3] = Double.parseDouble(rxyz[0]);
+//                point[4] = Double.parseDouble(rxyz[1]);
+//                point[5] = Double.parseDouble(rxyz[2]);
+//
+//                pts.add(point);
+//            } catch (Exception e) {
+//                Log.e("getJogPoints", "Ошибка парсинга координат: " + e.getMessage());
+//            }
+//        }
+//
+//        return pts;
+//    }
 
     private void toggleDropdownMenu() {
         if (dropdown_menu.getVisibility() == View.VISIBLE) {
@@ -680,7 +727,6 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
         savePositions();
         super.onDestroy();
     }
-    //Добавить точки отдох, подход, домашнее положение
 
     private void calculations() {
         // Получаем координаты из полей класса
@@ -1008,7 +1054,7 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
         Log.d("TRAJ", "Метод trajectory_Parameters() вызван");
         boolean is_Debug_Info_Active = true; // Флаг для отладки
 
-        double speed = 50; // Значение по умолчанию
+        double speed = 30; // Значение по умолчанию
         List<View> blocks = taskBlocksMap.get(currentTaskIndex);
         if (blocks != null) {
             for (View block : blocks) {
@@ -1028,7 +1074,7 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
         this.stepDelay = (long) (1000 / speed);
 
         // Поиск активного блока с чекбоксом
-        double Step = 5;
+        double Step = 5.0;
 
         // Вычисляем общие параметры траектории
         double Ugol = end_coner_save - start_coner_save;
@@ -1126,8 +1172,13 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
         return new double[]{Rx, Ry, Rz};
     }
 
-    private void generateArcPath() {
-        arcPoints = new ArrayList<>();
+    private List<double[]> generateArcPath() {
+        List<double[]> arcPoints = new ArrayList<>();
+
+        // Добавляем точку подхода (если нужно)
+//        arcPoints.add(new double[]{x5, y5, z5, rx5, ry5, rz5});
+
+        // Генерируем точки дуги
         for (int count = 0; count <= CS; count++) {
             double coner = start_coner_save + Rotate * count;
             double[] xyz = coordinates(0, coner);
@@ -1137,14 +1188,73 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                     rxyz[0], rxyz[1], rxyz[2]
             });
         }
+
+        // Добавляем точку отхода (если нужно)
+//        arcPoints.add(new double[]{x4, y4, z4, rx4, ry4, rz4});
+
+        return arcPoints;
     }
 
-    private void startStepMovement() {
-        if (arcPoints == null || arcPoints.isEmpty()) {
-            generateArcPath();
+    //ДВИЖЕНИЯ
+    private void executeTrajectory() {
+        // Проверка на валидность точки ДОМ
+        if (!isValidPoint(x6, y6, z6, rx6, ry6, rz6)) {
+            Toast.makeText(this, "Точка дом не задана", Toast.LENGTH_SHORT).show();
+            return;
         }
-        currentStep = 0;
-        movementHandler.post(stepMovementRunnable);
+        // Проверка на валидность точки ПОДХОДА
+        if (!isValidPoint(x5, y5, z5, rx5, ry5, rz5)) {
+            Toast.makeText(this, "Точка подхода не задана", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Проверка на валидность точки ОТХОДА
+        if (!isValidPoint(x4, y4, z4, rx4, ry4, rz4)) {
+            Toast.makeText(this, "Точка отхода не задана", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Генерация траектории
+        final List<double[]> trajectory = generateArcPath();
+
+        // Запуск движения в фоновом потоке
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    // Перемещение в точку Дом
+                    moveToHomePosition();
+
+                    // Перемещение в точку ПОДХОД
+                    moveToApproachPosition();
+
+                    // Движение по траектории
+                    for (final double[] point : trajectory) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(CountActivity.this, "Выполнение движения по траектории", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                        present.doMovL(point);
+                        present.syncRobot();
+                        Thread.sleep(stepDelay);
+                    }
+
+                    // Перемещение в точку ОТХОДА
+                    moveToRetreatPosition();
+
+                    // Перемещение в точку Дом
+                    moveToHomePosition();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    private boolean isValidPoint(double x, double y, double z, double rx, double ry, double rz) {
+        return !(x == 0.0 && y == 0.0 && z == 0.0 && rx == 0.0 && ry == 0.0 && rz == 0.0);
     }
 
     // Остановка движения

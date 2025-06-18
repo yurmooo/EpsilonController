@@ -57,6 +57,7 @@ public interface MainContract {
 
         void doMovJ(double[] point);
         void doMovL(double[] point);
+        void syncRobot();
         void doTestRun(List<double[]> points, long stepDelay);
 //        void startLineMovement(List<double[]> pathPoints, double speed);
 

@@ -323,7 +323,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         });
 
         ipAddressEdit = findViewById(R.id.ip_address_edit);
-        ipAddressEdit.setText("192.168.0.21");
+        ipAddressEdit.setText("192.168.0.20");
         ipAddressEdit.addTextChangedListener(new TextWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
@@ -362,7 +362,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         feedBackPortEdit = findViewById(R.id.feedback_port_edit);
         feedBackPortEdit.setText("30004");
 
-        currentIP = "192.168.0.21";
+        currentIP = "192.168.0.20";
         dashPort = 29999;
         movePort = 30003;
         feedBackPort = 30004;

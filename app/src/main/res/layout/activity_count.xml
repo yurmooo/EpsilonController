@@ -10,9 +10,11 @@
     <LinearLayout
         android:id="@+id/main_container"
         android:layout_width="match_parent"
-        android:layout_height="80dp"
+        android:layout_height="wrap_content"
+        android:elevation="4dp"
+        android:background="@android:color/white"
         android:orientation="vertical"
-        android:padding="16dp"
+        android:padding="8dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -23,9 +25,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="12dp"
-            android:paddingEnd="8dp"
-            android:paddingStart="8dp"
+            android:layout_marginBottom="8dp"
+            android:paddingHorizontal="8dp"
             android:baselineAligned="false">
 
             <ImageButton
@@ -65,7 +66,7 @@
     <LinearLayout
         android:id="@+id/controls_container"
         android:layout_width="727dp"
-        android:layout_height="309dp"
+        android:layout_height="336dp"
         android:orientation="vertical"
         android:padding="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -273,6 +274,34 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Старт"/>
+
+            <Button
+                android:id="@+id/house"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Дом" />
+
+            <Button
+                android:id="@+id/otxod"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="О" />
+
+            <Button
+                android:id="@+id/podxod"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="П" />
+
+            <Button
+                android:id="@+id/three"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="3" />
 
             <Button
                 android:id="@+id/stop_btn"

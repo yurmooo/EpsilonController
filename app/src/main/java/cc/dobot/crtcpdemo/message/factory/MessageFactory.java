@@ -32,6 +32,7 @@ import cc.dobot.crtcpdemo.message.product.cr.CRMessageSpeedFactor;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageSpeedL;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageStartPath;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageStopScript;
+import cc.dobot.crtcpdemo.message.product.cr.CRMessageSync;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageTool;
 import cc.dobot.crtcpdemo.message.product.cr.CRMessageUser;
 
@@ -111,6 +112,8 @@ public class MessageFactory {
                 return  new CRMessageCP();
             case CmdSet.SPEED_L:
                 return new CRMessageSpeedL();
+            case CmdSet.SYNC:
+                return new CRMessageSync();
         }
         return null;
     }
