@@ -80,7 +80,10 @@ public interface MainContract {
 
         double[] getCurrentJoint();
 
-
-
+        void setUserCoord(int index, double[] coordinates);
+        void setUser(int index);
+        void setUserJogMove(int axisIndex, boolean isPositive);
+        void setUserTestJogMove(int axisIndex, boolean isPositive);
+        void setUserTestJogMoveStop(int axisIndex, boolean isPositive);
     }
 }

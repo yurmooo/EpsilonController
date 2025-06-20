@@ -18,6 +18,7 @@ import java.io.OutputStream;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -65,6 +66,8 @@ import static cc.dobot.crtcpdemo.TransformUtils.transServoAlertJson2AlarmData;
 public class MainPresent implements MainContract.Present, StateMessageClient.StateRefreshListener {
     Handler handler = new Handler();
     MainContract.View view;
+    private int currentUserIndex = 0;
+    private int currentToolIndex = 0;
     boolean isConnected;
     boolean isPowerOn;
     boolean isEnable;
@@ -232,7 +235,8 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
         });
     }
 
-    private void setUser(int index) {
+    @Override
+    public void setUser(int index) {
         CRMessageUser crMessageUser = (CRMessageUser) MessageFactory.getInstance().createMsg(CmdSet.USER);
         crMessageUser.setIndex(index);
         view.refreshLogList(true,crMessageUser.getMessageStringContent());
@@ -244,6 +248,44 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
                     view.refreshLogList(false,new String(msg.getTotalBytes()));
             }
         });
+        this.currentUserIndex = index;
+    }
+
+    @Override
+    public void setUserCoord(int index, double[] coordinates) {
+        // Проверка входных параметров
+        if (index < 0 || index > 9) {
+            throw new IllegalArgumentException("Index must be between 0 and 9");
+        }
+        if (coordinates == null || coordinates.length != 6) {
+            throw new IllegalArgumentException("Coordinates array must contain exactly 6 values (x,y,z,rx,ry,rz)");
+        }
+
+        // Формируем строку параметров в формате {x,y,z,rx,ry,rz}
+        String tableParams = String.format("{%f,%f,%f,%f,%f,%f}",
+                coordinates[0], coordinates[1], coordinates[2],
+                coordinates[3], coordinates[4], coordinates[5]);
+
+        // Создаем сообщение
+        CRMessageUser crMessageUser = (CRMessageUser) MessageFactory.getInstance().createMsg(CmdSet.USER);
+        crMessageUser.setIndex(index);
+        crMessageUser.setTable(tableParams); // Устанавливаем параметры координат
+
+        // Логируем отправляемую команду
+        view.refreshLogList(true, crMessageUser.getMessageStringContent());
+
+        // Отправляем команду
+        APIMessageClient.getInstance().sendMsg(crMessageUser, new MessageCallback() {
+            @Override
+            public void onMsgCallback(MsgState state, OriginalData msg) {
+                System.out.println("setUser msgState:" + state);
+                if (msg != null) {
+                    view.refreshLogList(false, new String(msg.getTotalBytes()));
+                }
+            }
+        });
+
+        Log.d("SetUserCoord(Present)", "Индекс: " + index + " Массив точек: " + Arrays.toString(coordinates));
     }
 
 //    private void setTool(int index) {
@@ -273,6 +315,7 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
                     view.refreshLogList(false, new String(msg.getTotalBytes()));
             }
         });
+        this.currentToolIndex = index;
     }
 
     private void setArmOrientation(int r, int d, int n, int cfg) {
@@ -558,7 +601,59 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
 
             CRMessageMoveJog msg = (CRMessageMoveJog) MessageFactory.getInstance().createMsg(CmdSet.MOVE_JOG);
             msg.setAxisID(command);
-            String messageContent = "MoveJog(" + command + ",CoordType=2)"; // 1 for tool coordinate system
+            String messageContent = String.format("MoveJog(%s,CoordType=2,User=%d,Tool=%d)",
+                    command, currentUserIndex, currentToolIndex); // 2 for tool coordinate system
+            Log.d("FULLtool", "cmd:" + messageContent);
+            msg.setMessageContent(messageContent.getBytes(Charset.forName("US-ASCII")));
+            view.refreshLogList(true, msg.getMessageStringContent());
+            MoveMessageClient.getInstance().sendMsg(msg, null);
+        }
+    }
+
+    @Override
+    public void setUserJogMove(int axisIndex, boolean isPositive) {
+        String[] axisNames = {"X", "Y", "Z", "Rx", "Ry", "Rz"};
+        if (axisIndex >= 0 && axisIndex < axisNames.length) {
+            String dir = isPositive ? "+" : "-";
+            String command = axisNames[axisIndex] + dir;
+            CRMessageMoveJog msg = (CRMessageMoveJog) MessageFactory.getInstance().createMsg(CmdSet.MOVE_JOG);
+            msg.setAxisID(command);
+            String messageContent = String.format("MoveJog(%s,CoordType=0,User=%d,Tool=%d)",
+                    command, currentUserIndex, currentToolIndex); // 0 for user coordinate system
+            Log.d("FULLuser", "cmd:" + messageContent);
+            msg.setMessageContent(messageContent.getBytes(Charset.forName("US-ASCII")));
+            view.refreshLogList(true, msg.getMessageStringContent());
+            MoveMessageClient.getInstance().sendMsg(msg, null);
+        }
+    }
+
+    @Override
+    public void setUserTestJogMove(int axisIndex, boolean isPositive) {
+        String[] axisNames = {"X", "Y", "Z", "Rx", "Ry", "Rz"};
+        if (axisIndex >= 0 && axisIndex < axisNames.length) {
+            String dir = isPositive ? "+" : "-";
+            String command = "Rx+";
+            CRMessageMoveJog msg = (CRMessageMoveJog) MessageFactory.getInstance().createMsg(CmdSet.MOVE_JOG);
+            msg.setAxisID(command);
+            String messageContent = String.format("MoveJog(%s,CoordType=0,User=%d,Tool=%d)",
+                    command, currentUserIndex, currentToolIndex); // 0 for user coordinate system
+            Log.d("TESTuser", "cmd:" + messageContent);
+            msg.setMessageContent(messageContent.getBytes(Charset.forName("US-ASCII")));
+            view.refreshLogList(true, msg.getMessageStringContent());
+            MoveMessageClient.getInstance().sendMsg(msg, null);
+        }
+    }
+
+    @Override
+    public void setUserTestJogMoveStop(int axisIndex, boolean isPositive) {
+        String[] axisNames = {"X", "Y", "Z", "Rx", "Ry", "Rz"};
+        if (axisIndex >= 0 && axisIndex < axisNames.length) {
+            String dir = isPositive ? "+" : "-";
+            String command = "";
+            CRMessageMoveJog msg = (CRMessageMoveJog) MessageFactory.getInstance().createMsg(CmdSet.MOVE_JOG);
+            msg.setAxisID(command);
+            String messageContent = String.format("MoveJog()"); // for stop
+            Log.d("TESTuserstop", "cmd:" + messageContent);
             msg.setMessageContent(messageContent.getBytes(Charset.forName("US-ASCII")));
             view.refreshLogList(true, msg.getMessageStringContent());
             MoveMessageClient.getInstance().sendMsg(msg, null);

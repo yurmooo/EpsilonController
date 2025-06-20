@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.ArrayAdapter;
 import android.Manifest;
@@ -25,6 +26,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.animation.Animator;
@@ -57,6 +59,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
     ImageButton settings, script, block_script, log_act, drag_mode, closeButton;
     Button connectRobot, clearAlarm, speedRatioBTN;
     EditText speedRatioEdit;
+    Spinner user, tool;
     Button getPosBTN;
     TextView DIText, DOText;
     TabLayout jogMoveTab;
@@ -179,6 +182,56 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         if (present.isConnected()) {
             refreshEnableState(present.isEnable());
         }
+
+        user = findViewById(R.id.user);
+        tool = findViewById(R.id.tool);
+
+        // Создаем массив чисел от 0 до 9
+        String[] numbers = new String[10];
+        for (int i = 0; i < 10; i++) {
+            numbers[i] = String.valueOf(i);
+        }
+
+        // Создаем адаптер для Spinner'ов
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                R.layout.spinner_item, // ваш кастомный layout
+                numbers);
+        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
+
+        // Устанавливаем адаптеры
+        user.setAdapter(adapter);
+        tool.setAdapter(adapter);
+
+        // Обработчики выбора для Spinner'ов
+        user.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                int selectedUser = Integer.parseInt((String) parent.getItemAtPosition(position));
+                if (present != null) {
+                    present.setUser(selectedUser);
+                    Log.d("Spinner", "User selected: " + selectedUser);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        tool.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                int selectedTool = Integer.parseInt((String) parent.getItemAtPosition(position));
+                if (present != null) {
+                    present.setTool(selectedTool);
+                    Log.d("Spinner", "Tool selected: " + selectedTool);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
     }
 
     private void initView() {
@@ -323,7 +376,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         });
 
         ipAddressEdit = findViewById(R.id.ip_address_edit);
-        ipAddressEdit.setText("192.168.0.20");
+        ipAddressEdit.setText("192.168.0.21");
         ipAddressEdit.addTextChangedListener(new TextWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
@@ -362,7 +415,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
         feedBackPortEdit = findViewById(R.id.feedback_port_edit);
         feedBackPortEdit.setText("30004");
 
-        currentIP = "192.168.0.20";
+        currentIP = "192.168.0.21";
         dashPort = 29999;
         movePort = 30003;
         feedBackPort = 30004;
@@ -517,7 +570,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                             }
                         } else if (tabIndex == 1) { // Пользователь
                             if (selectedToolAxis >= 0) {
-                                present.setJogMove(true, selectedToolAxis);
+                                present.setUserJogMove(selectedToolAxis, true);
                             } else {
                                 showSingleToast(
                                         "Сначала выберите ось пользователя");
