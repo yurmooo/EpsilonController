@@ -49,14 +49,14 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
     private int currentTaskIndex = 0;
     private double[] u; // Параметры новой рабочей плоскости
     private double x1, y1, z1, rx1, ry1, rz1; // START
-    double[] start = {100, 0, 0}; //Массив START test
-//    double[] start = {x1, y1, z1}; //Массив START
+//    double[] start = {100, 0, 0}; //Массив START test
+    double[] start = {x1, y1, z1}; //Массив START
     private double x2, y2, z2, rx2, ry2, rz2; // MID
-    double[] mid = {0, 100, 0}; //Массив MID test
-//    double[] mid = {x2, y2, z2}; //Массив MID
+//    double[] mid = {0, 100, 0}; //Массив MID test
+    double[] mid = {x2, y2, z2}; //Массив MID
     private double x3, y3, z3, rx3, ry3, rz3; // END
-    double[] end = {0, 0, 100}; //Массив END test
-//    double[] end = {x3, y3, z3}; //Массив END
+//    double[] end = {0, 0, 100}; //Массив END test
+    double[] end = {x3, y3, z3}; //Массив END
     private double x4, y4, z4, rx4, ry4, rz4;
     private double x5, y5, z5, rx5, ry5, rz5;
     private double x6, y6, z6, rx6, ry6, rz6;
@@ -384,6 +384,7 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                     rx1 = coords[3];
                     ry1 = coords[4];
                     rz1 = coords[5];
+                    start = new double[]{x1, y1, z1};
                     String text = String.format("X=%.4f, Y=%.4f\n Z=%.4f, Rx=%.4f\n Ry=%.4f, Rz=%.4f", x1, y1, z1, rx1, ry1, rz1);
                     pos1.setText(text);
                 } else {
@@ -403,6 +404,7 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                     rx2 = coords[3];
                     ry2 = coords[4];
                     rz2 = coords[5];
+                    mid = new double[]{x2, y2, z2};
                     String text = String.format("X=%.4f, Y=%.4f\n Z=%.4f, Rx=%.4f\n Ry=%.4f, Rz=%.4f", x2, y2, z2, rx2, ry2, rz2);
                     pos2.setText(text);
                 } else {
@@ -422,6 +424,7 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
                     rx3 = coords[3];
                     ry3 = coords[4];
                     rz3 = coords[5];
+                    end = new double[]{x3, y3, z3};
                     String text = String.format("X=%.4f, Y=%.4f\n Z=%.4f, Rx=%.4f\n Ry=%.4f, Rz=%.4f", x3, y3, z3, rx3, ry3, rz3);
                     pos3.setText(text);
                 } else {
@@ -1256,6 +1259,10 @@ public class CountActivity extends AppCompatActivity implements MainContract.Vie
     }
 
     private void Radius_calculation() {
+        Log.d("CALC", "x1: " + x1 + " y1: " + y1 + " z1: " + z1);
+        Log.d("CALC", "x2: " + x2 + " y2: " + y2 + " z2: " + z2);
+        Log.d("CALC", "x3: " + x3 + " y3: " + y3 + " z3: " + z3);
+
         // Вычисление расстояний
         double c = distance(start, mid);
         Log.d("CALC", "c: " + c);

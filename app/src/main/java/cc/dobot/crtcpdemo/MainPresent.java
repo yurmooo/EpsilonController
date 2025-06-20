@@ -632,7 +632,7 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
         String[] axisNames = {"X", "Y", "Z", "Rx", "Ry", "Rz"};
         if (axisIndex >= 0 && axisIndex < axisNames.length) {
             String dir = isPositive ? "+" : "-";
-            String command = "Rx+";
+            String command = "Y+";
             CRMessageMoveJog msg = (CRMessageMoveJog) MessageFactory.getInstance().createMsg(CmdSet.MOVE_JOG);
             msg.setAxisID(command);
             String messageContent = String.format("MoveJog(%s,CoordType=0,User=%d,Tool=%d)",
