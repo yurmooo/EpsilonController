@@ -665,7 +665,7 @@ public class MainPresent implements MainContract.Present, StateMessageClient.Sta
         final String jogStr;
         switch (pos) {
             case 0:
-                jogStr = !isCoordinate ? "j1+" : "x+";
+                jogStr = !isCoordinate ? "j1+" : "X+";
                 break;
             case 1:
                 jogStr = !isCoordinate ? "j2+" : "y+";

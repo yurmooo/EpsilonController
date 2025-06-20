@@ -61,11 +61,9 @@ public class CRMessageUser extends BaseMessage {
     @Override
     public void constructSendData() {
         String command;
-        if (table.isEmpty()) {
-            // Если таблица не задана, используем старый формат команды
+        if (table == null || table.isEmpty()) {
             command = "User(" + index + ")";
         } else {
-            // Если таблица задана, используем новый формат с параметрами
             command = "SetUser(" + index + "," + table + ")";
         }
 

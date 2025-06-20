@@ -608,7 +608,7 @@ public class MainActivityEpsilon extends AppCompatActivity implements MainContra
                             }
                         } else if (tabIndex == 1) {
                             if (selectedToolAxis >= 0) {
-                                present.setJogMove(true, selectedToolAxis + 6);
+                                present.setUserJogMove(selectedToolAxis, false);
                             } else {
                                 showSingleToast(
                                         "Сначала выберите ось пользователя");
